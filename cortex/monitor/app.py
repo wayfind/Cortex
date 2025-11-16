@@ -13,6 +13,7 @@ from cortex.config.settings import get_settings
 from cortex.monitor import dependencies
 from cortex.monitor.db_manager import DatabaseManager
 from cortex.monitor.routers import alerts, cluster, decisions, health, intents, reports
+from cortex.monitor.services.heartbeat_checker import HeartbeatChecker
 
 
 @asynccontextmanager
@@ -31,11 +32,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 设置全局数据库管理器
     dependencies.set_db_manager(db_manager)
 
+    # 启动心跳检测器（5 分钟超时，每 60 秒检查一次）
+    heartbeat_checker = HeartbeatChecker(db_manager, timeout_minutes=5, check_interval_seconds=60)
+    heartbeat_checker.start()
+    logger.success("Heartbeat checker started")
+
     # 启动时的其他初始化
     yield
 
     # 关闭时清理
     logger.info("Shutting down Cortex Monitor...")
+    await heartbeat_checker.stop()
+    logger.info("Heartbeat checker stopped")
     await db_manager.close()
     logger.info("Monitor shutdown complete")
 

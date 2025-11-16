@@ -268,6 +268,63 @@ async def delete_agent(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class HeartbeatRequest(BaseModel):
+    """心跳请求"""
+
+    health_status: Optional[str] = None  # healthy/warning/critical
+
+
+@router.post("/agents/{agent_id}/heartbeat")
+async def agent_heartbeat(
+    agent_id: str,
+    heartbeat: HeartbeatRequest = HeartbeatRequest(),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """
+    接收 Agent 心跳
+
+    Agent 应定期调用此 API 报告存活状态（建议每 1-2 分钟）。
+    如果 5 分钟内未收到心跳，Monitor 将标记该 Agent 为 offline。
+    """
+    try:
+        result = await session.execute(select(Agent).where(Agent.id == agent_id))
+        agent = result.scalar_one_or_none()
+
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        # 更新心跳时间和状态
+        agent.last_heartbeat = datetime.utcnow()
+        agent.status = "online"
+
+        # 如果提供了健康状态，也更新
+        if heartbeat.health_status:
+            agent.health_status = heartbeat.health_status
+
+        await session.commit()
+
+        logger.debug(f"Heartbeat received from {agent_id}")
+
+        return {
+            "success": True,
+            "data": {
+                "agent_id": agent_id,
+                "status": agent.status,
+                "health_status": agent.health_status,
+                "last_heartbeat": agent.last_heartbeat.isoformat(),
+            },
+            "message": "Heartbeat recorded",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing heartbeat from {agent_id}: {e}")
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/cluster/overview")
 async def cluster_overview(
     session: AsyncSession = Depends(get_session),
