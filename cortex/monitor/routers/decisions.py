@@ -3,17 +3,102 @@ L2 决策路由
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import AsyncGenerator, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cortex.config.settings import get_settings
 from cortex.monitor.dependencies import get_db_manager
 from cortex.monitor.database import Agent, Decision
+from cortex.monitor.services.decision_engine import DecisionEngine
 
 router = APIRouter()
+
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """获取数据库会话（依赖注入）"""
+    async for session in get_db_manager().get_session():
+        yield session
+
+
+class DecisionRequest(BaseModel):
+    """L2 决策请求（来自子节点）"""
+
+    agent_id: str  # 原始报告此问题的 Agent ID
+    issue_type: str
+    issue_description: str
+    severity: str
+    proposed_action: Optional[str] = None
+    risk_assessment: Optional[str] = None
+    details: Optional[dict] = None
+
+
+@router.post("/decisions/request")
+async def request_decision(
+    decision_request: DecisionRequest,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """
+    处理来自子节点的 L2 决策请求
+
+    子节点 Monitor 将 L2 问题转发到此接口，由上级 Monitor 决策。
+    """
+    try:
+        logger.info(
+            f"Received L2 decision request from child for agent {decision_request.agent_id}: "
+            f"{decision_request.issue_type}"
+        )
+
+        # 构造 IssueReport 对象（用于 DecisionEngine）
+        from cortex.common.models import IssueReport, Severity
+
+        # 将字符串 severity 转换为 Severity 枚举
+        try:
+            severity_enum = Severity(decision_request.severity)
+        except ValueError:
+            severity_enum = Severity.MEDIUM  # 默认值
+
+        issue = IssueReport(
+            level="L2",
+            type=decision_request.issue_type,
+            description=decision_request.issue_description,
+            severity=severity_enum,
+            proposed_fix=decision_request.proposed_action,
+            risk_assessment=decision_request.risk_assessment,
+            details=decision_request.details or {},
+        )
+
+        # 使用 DecisionEngine 分析
+        settings = get_settings()
+        decision_engine = DecisionEngine(settings)
+        decision = await decision_engine.analyze_and_decide(
+            issue, decision_request.agent_id, session
+        )
+
+        logger.info(
+            f"Decision made for child request: {decision.status.upper()} - {decision.reason}"
+        )
+
+        return {
+            "success": True,
+            "data": {
+                "decision_id": decision.id,
+                "status": decision.status,
+                "reason": decision.reason,
+                "llm_analysis": decision.llm_analysis,
+                "created_at": decision.created_at.isoformat(),
+            },
+            "message": "Decision completed",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error processing decision request: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/decisions")

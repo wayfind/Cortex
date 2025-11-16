@@ -13,8 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cortex.common.models import ProbeReport
 from cortex.config.settings import get_settings
 from cortex.monitor.dependencies import get_db_manager
-from cortex.monitor.database import Agent, Report
+from cortex.monitor.database import Agent, Decision, Report
 from cortex.monitor.services import AlertAggregator, DecisionEngine, TelegramNotifier
+from cortex.monitor.services.upstream_forwarder import UpstreamForwarder
 
 router = APIRouter()
 
@@ -84,13 +85,58 @@ async def receive_report(
 
         # 4. 处理 L2 决策请求
         settings = get_settings()
-        decision_engine = DecisionEngine(settings)
         l2_decisions = []
 
         l2_issues = [issue for issue in report.issues if issue.level == "L2"]
         if l2_issues:
             logger.info(f"Processing {len(l2_issues)} L2 issues from {report.agent_id}")
-            l2_decisions = await decision_engine.batch_analyze(l2_issues, report.agent_id, session)
+
+            # 检查是否需要转发到上级 Monitor（集群模式）
+            if agent.upstream_monitor_url:
+                logger.info(
+                    f"Cluster mode detected: forwarding {len(l2_issues)} L2 issues to upstream "
+                    f"{agent.upstream_monitor_url}"
+                )
+                upstream_forwarder = UpstreamForwarder()
+
+                for issue in l2_issues:
+                    decision_data = await upstream_forwarder.forward_decision_request(
+                        issue, report.agent_id, agent.upstream_monitor_url
+                    )
+
+                    if decision_data:
+                        # 保存上级的决策到本地数据库（作为记录）
+                        decision = Decision(
+                            agent_id=report.agent_id,
+                            issue_type=issue.type,
+                            issue_description=issue.description,
+                            proposed_action=issue.proposed_fix or "",
+                            llm_analysis=decision_data.get("llm_analysis"),
+                            status=decision_data["status"],
+                            reason=decision_data["reason"],
+                        )
+                        session.add(decision)
+                        l2_decisions.append(decision)
+                    else:
+                        logger.error(
+                            f"Failed to get decision from upstream for {issue.type}, "
+                            f"falling back to local decision"
+                        )
+                        # 上级失败时，回退到本地决策
+                        decision_engine = DecisionEngine(settings)
+                        decision = await decision_engine.analyze_and_decide(
+                            issue, report.agent_id, session
+                        )
+                        l2_decisions.append(decision)
+
+                await session.commit()
+            else:
+                # 独立模式：本地决策
+                logger.debug("Standalone mode: processing L2 issues locally")
+                decision_engine = DecisionEngine(settings)
+                l2_decisions = await decision_engine.batch_analyze(
+                    l2_issues, report.agent_id, session
+                )
 
         # 5. 处理 L3 告警
         alert_aggregator = AlertAggregator(settings)
