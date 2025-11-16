@@ -86,6 +86,15 @@ class LoggingConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="CORTEX_LOG_")
 
 
+class IntentEngineConfig(BaseSettings):
+    """Intent-Engine 配置"""
+
+    enabled: bool = Field(True, description="是否启用意图记录")
+    database_url: str = Field("sqlite:///./cortex_intents.db", description="Intent 数据库 URL")
+
+    model_config = SettingsConfigDict(env_prefix="CORTEX_INTENT_")
+
+
 class Settings(BaseSettings):
     """全局配置"""
 
@@ -94,6 +103,7 @@ class Settings(BaseSettings):
     monitor: MonitorConfig
     claude: ClaudeConfig
     telegram: TelegramConfig = TelegramConfig()
+    intent_engine: IntentEngineConfig = IntentEngineConfig()
     logging: LoggingConfig = LoggingConfig()
 
     @classmethod
@@ -113,6 +123,7 @@ class Settings(BaseSettings):
             monitor=MonitorConfig(**config_dict.get("monitor", {})),
             claude=ClaudeConfig(**config_dict.get("claude", {})),
             telegram=TelegramConfig(**config_dict.get("telegram", {})),
+            intent_engine=IntentEngineConfig(**config_dict.get("intent_engine", {})),
             logging=LoggingConfig(**config_dict.get("logging", {})),
         )
 
@@ -136,5 +147,8 @@ def get_settings() -> Settings:
                 probe=ProbeConfig(),
                 monitor=MonitorConfig(),
                 claude=ClaudeConfig(),
+                telegram=TelegramConfig(),
+                intent_engine=IntentEngineConfig(),
+                logging=LoggingConfig(),
             )
     return _settings

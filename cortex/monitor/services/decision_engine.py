@@ -9,6 +9,7 @@ from anthropic import Anthropic
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cortex.common.intent_recorder import IntentRecorder
 from cortex.common.models import IssueReport
 from cortex.config.settings import Settings
 from cortex.monitor.database import Decision
@@ -61,6 +62,7 @@ ANALYSIS: [详细分析，可选]
         """
         self.settings = settings
         self.client = Anthropic(api_key=settings.claude.api_key)
+        self.intent_recorder = IntentRecorder(settings)
 
     async def analyze_and_decide(
         self, issue: IssueReport, agent_id: str, session: AsyncSession
@@ -79,6 +81,9 @@ ANALYSIS: [详细分析，可选]
         logger.info(
             f"Analyzing L2 issue from {agent_id}: {issue.type} - {issue.description[:50]}..."
         )
+
+        # 初始化 Intent 记录器（如果未初始化）
+        await self.intent_recorder.initialize()
 
         # 构造提示词
         prompt = self.DECISION_PROMPT_TEMPLATE.format(
@@ -128,6 +133,23 @@ ANALYSIS: [详细分析，可选]
 
         logger.info(
             f"Decision made for {agent_id}/{issue.type}: {decision_status.upper()} - {reason}"
+        )
+
+        # 记录 L2 决策到 Intent Engine
+        await self.intent_recorder.record_decision(
+            agent_id=agent_id,
+            level="L2",
+            category=issue.type,
+            description=f"LLM decision for {issue.type}: {decision_status.upper()} - {reason}",
+            status=decision_status,
+            metadata={
+                "issue_description": issue.description,
+                "proposed_action": issue.proposed_fix,
+                "severity": issue.severity.value,
+                "llm_reason": reason,
+                "llm_analysis": analysis,
+                "decision_id": decision.id,
+            },
         )
 
         return decision

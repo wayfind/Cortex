@@ -10,6 +10,7 @@ import httpx
 from anthropic import Anthropic
 from loguru import logger
 
+from cortex.common.intent_recorder import IntentRecorder
 from cortex.common.models import (
     ActionReport,
     AgentStatus,
@@ -37,6 +38,9 @@ class ProbeExecutor:
         self.issue_classifier = IssueClassifier()
         self.auto_fixer = L1AutoFixer()
 
+        # Intent 记录器
+        self.intent_recorder = IntentRecorder(settings)
+
         # Claude SDK
         self.claude_client = Anthropic(api_key=settings.claude.api_key)
 
@@ -51,6 +55,16 @@ class ProbeExecutor:
             生成的 Probe 上报数据
         """
         logger.info(f"Starting probe execution for agent: {self.agent_id}")
+
+        # 初始化 Intent 记录器
+        await self.intent_recorder.initialize()
+
+        # 记录巡检开始
+        await self.intent_recorder.record_milestone(
+            agent_id=self.agent_id,
+            category="probe_execution_start",
+            description=f"Starting probe execution for {self.agent_id}",
+        )
 
         # 1. 收集系统信息
         system_info = self.system_monitor.collect_metrics()
@@ -67,12 +81,40 @@ class ProbeExecutor:
             f"L2: {len(classified_issues['L2'])}, L3: {len(classified_issues['L3'])}"
         )
 
-        # 4. L1 问题自动修复
+        # 4. L1 问题自动修复（带意图记录）
         fixed_issues: List[ActionReport] = []
         for l1_issue in classified_issues["L1"]:
             action_report = await self.auto_fixer.fix(l1_issue)
             if action_report:
                 fixed_issues.append(action_report)
+
+                # 记录 L1 修复决策
+                await self.intent_recorder.record_decision(
+                    agent_id=self.agent_id,
+                    level="L1",
+                    category=l1_issue.type,
+                    description=f"Auto-fixed: {l1_issue.description}",
+                    status="completed" if action_report.result.value == "success" else "failed",
+                    metadata={
+                        "issue_type": l1_issue.type,
+                        "action": action_report.action,
+                        "result": action_report.result.value,
+                        "details": action_report.details,
+                    },
+                )
+
+        # 记录 L3 严重问题
+        for l3_issue in classified_issues["L3"]:
+            await self.intent_recorder.record_blocker(
+                agent_id=self.agent_id,
+                category=l3_issue.type,
+                description=l3_issue.description,
+                metadata={
+                    "severity": l3_issue.severity.value,
+                    "proposed_fix": l3_issue.proposed_fix,
+                    "risk_assessment": l3_issue.risk_assessment,
+                },
+            )
 
         # 5. 确定整体状态
         status = self._determine_status(system_info, classified_issues)
@@ -89,6 +131,21 @@ class ProbeExecutor:
                 "probe_version": "1.0.0",
                 "execution_time_seconds": 0,  # TODO: 计算实际执行时间
                 "llm_model": self.settings.claude.model,
+            },
+        )
+
+        # 记录巡检完成
+        await self.intent_recorder.record_milestone(
+            agent_id=self.agent_id,
+            category="probe_execution_completed",
+            description=f"Probe execution completed. Status: {status.value}, "
+            f"L1 fixes: {len(fixed_issues)}, L2 issues: {len(classified_issues['L2'])}, "
+            f"L3 issues: {len(classified_issues['L3'])}",
+            metadata={
+                "status": status.value,
+                "l1_fixes_count": len(fixed_issues),
+                "l2_issues_count": len(classified_issues["L2"]),
+                "l3_issues_count": len(classified_issues["L3"]),
             },
         )
 
@@ -215,3 +272,4 @@ class ProbeExecutor:
     async def cleanup(self) -> None:
         """清理资源"""
         await self.http_client.aclose()
+        await self.intent_recorder.close()

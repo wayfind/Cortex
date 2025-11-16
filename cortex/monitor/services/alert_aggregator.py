@@ -9,6 +9,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cortex.common.intent_recorder import IntentRecorder
 from cortex.common.models import IssueReport
 from cortex.config.settings import Settings
 from cortex.monitor.database import Alert
@@ -39,6 +40,7 @@ class AlertAggregator:
             settings: 全局配置
         """
         self.settings = settings
+        self.intent_recorder = IntentRecorder(settings)
 
     async def process_issues(
         self, issues: List[IssueReport], agent_id: str, session: AsyncSession
@@ -128,6 +130,9 @@ class AlertAggregator:
         Returns:
             Alert 对象（已保存到数据库）
         """
+        # 初始化 Intent 记录器（如果未初始化）
+        await self.intent_recorder.initialize()
+
         alert = Alert(
             agent_id=agent_id,
             level="L3",
@@ -138,13 +143,27 @@ class AlertAggregator:
             details={
                 "proposed_fix": issue.proposed_fix,
                 "risk_assessment": issue.risk_assessment,
-                "context": issue.context,
+                **issue.details,  # 合并原有的 details
             },
         )
 
         session.add(alert)
         await session.commit()
         await session.refresh(alert)
+
+        # 记录 L3 告警到 Intent Engine
+        await self.intent_recorder.record_blocker(
+            agent_id=agent_id,
+            category=issue.type,
+            description=f"L3 Alert created: {issue.description}",
+            metadata={
+                "severity": issue.severity.value,
+                "proposed_fix": issue.proposed_fix,
+                "risk_assessment": issue.risk_assessment,
+                "alert_id": alert.id,
+                "details": issue.details,
+            },
+        )
 
         return alert
 

@@ -23,9 +23,15 @@ Cortex 是一个创新的智能运维系统，每个节点都是一个独立的 
 
 ### 环境要求
 
+**Monitor**：
 - Python 3.11+
 - SQLite 3.40+ (或 PostgreSQL 13+)
 - Claude API Key
+
+**Probe（新版文档驱动）**：
+- Python 3.11+
+- [Claude Code](https://code.claude.com) CLI
+- 系统工具：bash, cron
 
 ### 安装
 
@@ -72,17 +78,40 @@ monitor:
 
 ### 运行
 
-**独立模式**（单节点）：
+#### Monitor（Web 服务）
 
 ```bash
-# 启动 Monitor（Web 服务）
+# 启动 Monitor
 cortex-monitor
 
-# 启动 Probe（定时巡检，另一个终端）
-cortex-probe
+# 访问 Web UI
+http://localhost:8000
 ```
 
-访问 Web UI：http://localhost:8000
+#### Probe（文档驱动模式）⭐ 推荐
+
+```bash
+# 一键安装
+cd probe_workspace
+sudo ./install.sh
+
+# 配置 Agent
+sudo nano /etc/cortex/config.yaml
+
+# 手动运行测试
+sudo /opt/cortex/probe/run_probe.sh
+
+# 查看结果
+cat /opt/cortex/probe/output/report.json
+```
+
+Cron 会自动定期执行巡检（安装时配置）。
+
+#### Probe（旧版，已弃用）
+
+```bash
+cortex-probe  # 不推荐使用
+```
 
 **集群模式**：
 
@@ -98,8 +127,9 @@ cortex-probe
 │                                     │
 │  ┌──────────────────────────────┐  │
 │  │  Probe (探测功能)             │  │
+│  │  - 文档驱动 (claude -p)       │  │
 │  │  - Cron 定时触发              │  │
-│  │  - LLM 巡检                   │  │
+│  │  - LLM 智能巡检               │  │
 │  │  - L1 自主修复                │  │
 │  │  - L2/L3 问题上报             │  │
 │  └──────────────────────────────┘  │
@@ -114,6 +144,33 @@ cortex-probe
 └─────────────────────────────────────┘
 ```
 
+### Probe 文档驱动模式
+
+Cortex Probe 采用创新的**文档驱动**架构，通过 `claude -p` 执行：
+
+```
+┌────────────┐     ┌────────────┐     ┌────────────┐
+│ Markdown   │ →   │ LLM 理解   │ →   │ 自动执行   │
+│ 巡检文档   │     │ 和决策     │     │ 和上报     │
+└────────────┘     └────────────┘     └────────────┘
+```
+
+**核心优势**：
+- 📄 **零代码扩展** - 新增巡检项只需添加 .md 文件（5分钟）
+- 🤖 **智能决策** - LLM 根据上下文自主判断问题级别
+- 🔧 **自动修复** - L1 问题零人工干预
+- 📊 **易于维护** - 运维人员可直接编辑文档
+
+**示例**：添加网络监控
+```bash
+cd /opt/cortex/probe/inspections
+cp TEMPLATE.md network.md  # 复制模板
+nano network.md            # 编辑巡检要求
+# 完成！下次自动生效
+```
+
+**详细文档**：[Probe 工作流程详解](docs/probe_workflow.md)
+
 ### 问题分级
 
 - **L1**：Probe 可本地自动修复（如磁盘清理、日志轮转）
@@ -127,10 +184,18 @@ cortex-probe
 
 ## 文档
 
+### 核心文档
 - [架构设计](docs/architecture.md)
 - [模块设计](docs/modules.md)
 - [API 参考](docs/api.md)
 - [开发路线图](docs/roadmap.md)
+
+### Probe 文档
+- **[Probe 工作流程详解](docs/probe_workflow.md)** ⭐ 深入理解文档驱动模式
+- [Probe 使用手册](probe_workspace/README.md)
+- [巡检项模板](probe_workspace/inspections/TEMPLATE.md)
+
+### 运维文档
 - [部署指南](docs/deployment.md)（待完成）
 - [故障排查](docs/troubleshooting.md)（待完成）
 
@@ -141,10 +206,17 @@ cortex-probe
 ```
 cortex/
 ├── cortex/              # 主代码包
-│   ├── probe/          # Probe 模块
+│   ├── probe/          # Probe 模块（旧版，已标记弃用）
 │   ├── monitor/        # Monitor 模块
 │   ├── common/         # 共享代码
 │   └── config/         # 配置管理
+├── probe_workspace/    # 新版 Probe - 文档驱动模式 ⭐
+│   ├── CLAUDE.md       # Probe Agent 角色定义
+│   ├── README.md       # 使用手册
+│   ├── install.sh      # 一键安装脚本
+│   ├── run_probe.sh    # 执行脚本
+│   ├── inspections/    # 巡检要求文档（Markdown）
+│   └── tools/          # 检查和修复工具（Python）
 ├── tests/              # 测试代码
 ├── frontend/           # Web UI（React + TypeScript）
 ├── scripts/            # 部署和工具脚本

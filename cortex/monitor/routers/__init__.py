@@ -1,7 +1,7 @@
 """
-Monitor API ï1!W
+Monitor API Routers
 """
 
-from cortex.monitor.routers import alerts, cluster, decisions, health, reports
+from cortex.monitor.routers import alerts, cluster, decisions, health, intents, reports
 
-__all__ = ["health", "reports", "decisions", "cluster", "alerts"]
+__all__ = ["health", "reports", "decisions", "cluster", "alerts", "intents"]

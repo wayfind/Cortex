@@ -11,7 +11,7 @@ from loguru import logger
 
 from cortex.config.settings import get_settings
 from cortex.monitor.db_manager import DatabaseManager
-from cortex.monitor.routers import alerts, cluster, decisions, health, reports
+from cortex.monitor.routers import alerts, cluster, decisions, health, intents, reports
 
 
 # 全局数据库管理器
@@ -65,6 +65,7 @@ app.include_router(reports.router, prefix="/api/v1", tags=["reports"])
 app.include_router(decisions.router, prefix="/api/v1", tags=["decisions"])
 app.include_router(cluster.router, prefix="/api/v1", tags=["cluster"])
 app.include_router(alerts.router, prefix="/api/v1", tags=["alerts"])
+app.include_router(intents.router, prefix="/api/v1", tags=["intents"])
 
 
 @app.get("/")
