@@ -3,7 +3,7 @@
 """
 
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import AsyncGenerator, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
@@ -11,10 +11,17 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cortex.config.settings import get_settings
 from cortex.monitor.dependencies import get_db_manager
 from cortex.monitor.database import Agent, Report
 
 router = APIRouter()
+
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """获取数据库会话（依赖注入）"""
+    async for session in get_db_manager().get_session():
+        yield session
 
 
 class AgentRegistration(BaseModel):
@@ -23,30 +30,76 @@ class AgentRegistration(BaseModel):
     agent_id: str
     name: str
     api_key: str
+    registration_token: str  # 用于验证注册请求的密钥
+    parent_id: Optional[str] = None  # 父节点 Agent ID（集群模式下必填）
+    upstream_monitor_url: Optional[str] = None  # 该节点自己的上级 Monitor URL
     metadata: Optional[dict] = None
 
 
 @router.post("/agents")
 async def register_agent(
     agent_reg: AgentRegistration,
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
-    注册新 Agent
+    注册新 Agent 或更新已有 Agent
+
+    集群模式下，下级节点通过此 API 注册到上级 Monitor。
+    需要提供正确的 registration_token 进行验证。
     """
     try:
-        # 检查是否已存在
+        # 1. 验证 registration_token
+        settings = get_settings()
+        if agent_reg.registration_token != settings.monitor.registration_token:
+            logger.warning(f"Invalid registration token from {agent_reg.agent_id}")
+            raise HTTPException(status_code=401, detail="Invalid registration token")
+
+        # 2. 检查是否已存在
         result = await session.execute(select(Agent).where(Agent.id == agent_reg.agent_id))
         existing_agent = result.scalar_one_or_none()
 
-        if existing_agent:
-            raise HTTPException(status_code=409, detail="Agent ID already exists")
+        # 3. 验证 parent_id（如果提供）
+        if agent_reg.parent_id:
+            parent_result = await session.execute(
+                select(Agent).where(Agent.id == agent_reg.parent_id)
+            )
+            parent_agent = parent_result.scalar_one_or_none()
+            if not parent_agent:
+                raise HTTPException(status_code=404, detail=f"Parent agent not found: {agent_reg.parent_id}")
 
-        # 创建新 Agent
+        if existing_agent:
+            # 更新已有 Agent（支持重新注册）
+            existing_agent.name = agent_reg.name
+            existing_agent.api_key = agent_reg.api_key
+            existing_agent.parent_id = agent_reg.parent_id
+            existing_agent.upstream_monitor_url = agent_reg.upstream_monitor_url
+            existing_agent.metadata_json = agent_reg.metadata
+            existing_agent.updated_at = datetime.utcnow()
+
+            await session.commit()
+
+            logger.info(f"Agent updated: {agent_reg.agent_id} ({agent_reg.name})")
+
+            return {
+                "success": True,
+                "data": {
+                    "agent_id": existing_agent.id,
+                    "name": existing_agent.name,
+                    "parent_id": existing_agent.parent_id,
+                    "updated_at": existing_agent.updated_at.isoformat(),
+                    "action": "updated",
+                },
+                "message": "Agent updated successfully",
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+
+        # 4. 创建新 Agent
         new_agent = Agent(
             id=agent_reg.agent_id,
             name=agent_reg.name,
             api_key=agent_reg.api_key,
+            parent_id=agent_reg.parent_id,
+            upstream_monitor_url=agent_reg.upstream_monitor_url,
             status="offline",
             health_status="unknown",
             metadata_json=agent_reg.metadata,
@@ -63,6 +116,7 @@ async def register_agent(
                 "agent_id": new_agent.id,
                 "name": new_agent.name,
                 "created_at": new_agent.created_at.isoformat(),
+                "action": "created",
             },
             "message": "Agent registered successfully",
             "timestamp": datetime.utcnow().isoformat(),
@@ -80,7 +134,7 @@ async def register_agent(
 async def list_agents(
     status: Optional[str] = Query(None, description="过滤状态: online/offline"),
     health_status: Optional[str] = Query(None, description="过滤健康状态: healthy/warning/critical"),
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     列出所有 Agent
@@ -124,7 +178,7 @@ async def list_agents(
 @router.get("/agents/{agent_id}")
 async def get_agent(
     agent_id: str,
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     获取单个 Agent 详情
@@ -182,7 +236,7 @@ async def get_agent(
 @router.delete("/agents/{agent_id}")
 async def delete_agent(
     agent_id: str,
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     删除 Agent（需要管理员权限）
@@ -216,7 +270,7 @@ async def delete_agent(
 
 @router.get("/cluster/overview")
 async def cluster_overview(
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     集群全局概览
@@ -278,4 +332,98 @@ async def cluster_overview(
 
     except Exception as e:
         logger.error(f"Error getting cluster overview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cluster/topology")
+async def cluster_topology(
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """
+    获取集群拓扑结构
+
+    返回所有节点的层级关系，构建完整的集群拓扑树。
+    层级定义：
+    - L0: 根节点（没有 upstream_monitor_url）
+    - L1: 直接连接到 L0 的节点
+    - L2: 连接到 L1 的节点
+    - ...依此类推
+    """
+    try:
+        # 获取所有 Agent
+        result = await session.execute(select(Agent).order_by(Agent.id))
+        all_agents = result.scalars().all()
+
+        # 构建节点字典
+        agents_dict = {agent.id: agent for agent in all_agents}
+
+        # 计算每个节点的层级
+        def calculate_level(agent_id: str, visited: set = None) -> int:
+            """递归计算节点层级"""
+            if visited is None:
+                visited = set()
+
+            if agent_id in visited:
+                # 检测到循环，返回 -1 表示错误
+                logger.warning(f"Circular dependency detected in cluster topology for agent: {agent_id}")
+                return -1
+
+            visited.add(agent_id)
+            agent = agents_dict.get(agent_id)
+
+            if not agent:
+                return -1
+
+            # 如果没有 parent_id，说明是根节点（L0）
+            if not agent.parent_id:
+                return 0
+
+            # 递归计算父节点的层级
+            parent_level = calculate_level(agent.parent_id, visited)
+
+            if parent_level == -1:
+                # 父节点有问题
+                return -1
+
+            # 当前节点层级 = 父节点层级 + 1
+            return parent_level + 1
+
+        # 构建拓扑树
+        topology = {
+            "nodes": [],
+            "levels": {},
+        }
+
+        for agent in all_agents:
+            level = calculate_level(agent.id)
+
+            node_info = {
+                "id": agent.id,
+                "name": agent.name,
+                "status": agent.status,
+                "health_status": agent.health_status,
+                "parent_id": agent.parent_id,
+                "upstream_monitor_url": agent.upstream_monitor_url,
+                "level": level,
+                "is_root": agent.parent_id is None,
+                "last_heartbeat": agent.last_heartbeat.isoformat() if agent.last_heartbeat else None,
+            }
+
+            topology["nodes"].append(node_info)
+
+            # 按层级分组
+            level_key = f"L{level}" if level >= 0 else "unknown"
+            if level_key not in topology["levels"]:
+                topology["levels"][level_key] = []
+            topology["levels"][level_key].append(agent.id)
+
+        return {
+            "success": True,
+            "data": topology,
+            "message": "Cluster topology retrieved successfully",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting cluster topology: {e}")
         raise HTTPException(status_code=500, detail=str(e))

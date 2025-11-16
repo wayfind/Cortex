@@ -22,6 +22,7 @@ class Agent(Base):
 
     id: Mapped[str] = mapped_column(String(100), primary_key=True)  # agent_id
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    parent_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)  # 父节点 ID（用于拓扑）
     upstream_monitor_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     api_key: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
 
