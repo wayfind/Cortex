@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cortex.common.intent_recorder import IntentRecord, IntentRecorder
 from cortex.config.settings import get_settings
-from cortex.monitor.app import get_db_manager
+from cortex.monitor.dependencies import get_db_manager
 
 router = APIRouter()
 

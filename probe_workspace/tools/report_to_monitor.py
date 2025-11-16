@@ -67,7 +67,7 @@ def upload_report(report: Dict[str, Any], monitor_url: str, api_key: str = None)
         HTTPError: 如果请求失败
     """
     # 构建完整的 API 端点
-    api_url = f"{monitor_url.rstrip('/')}/api/reports"
+    api_url = f"{monitor_url.rstrip('/')}/api/v1/reports"
 
     # 准备请求头
     headers = {

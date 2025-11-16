@@ -3,6 +3,7 @@
 """
 
 from datetime import datetime
+from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
@@ -11,17 +12,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cortex.common.models import ProbeReport
 from cortex.config.settings import get_settings
-from cortex.monitor.app import get_db_manager
+from cortex.monitor.dependencies import get_db_manager
 from cortex.monitor.database import Agent, Report
 from cortex.monitor.services import AlertAggregator, DecisionEngine, TelegramNotifier
 
 router = APIRouter()
 
 
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """获取数据库会话（依赖注入）"""
+    async for session in get_db_manager().get_session():
+        yield session
+
+
 @router.post("/reports")
 async def receive_report(
     report: ProbeReport,
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     接收 Probe 上报数据
@@ -61,9 +68,9 @@ async def receive_report(
             agent_id=report.agent_id,
             timestamp=report.timestamp,
             status=report.status.value,
-            metrics=report.metrics.model_dump(),
-            issues=[issue.model_dump() for issue in report.issues],
-            actions_taken=[action.model_dump() for action in report.actions_taken],
+            metrics=report.metrics.model_dump(mode='json'),
+            issues=[issue.model_dump(mode='json') for issue in report.issues],
+            actions_taken=[action.model_dump(mode='json') for action in report.actions_taken],
             metadata_json=report.metadata,
         )
         session.add(db_report)

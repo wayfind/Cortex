@@ -49,6 +49,7 @@ claude:
   model: "claude-sonnet-4"  # 模型名称
   max_tokens: 2000  # 最大 token 数
   timeout: 30  # 请求超时时间（秒）
+  temperature: 1.0  # 生成温度 (0.0-1.0，越高越随机)
 
 # Telegram 通知配置
 telegram:

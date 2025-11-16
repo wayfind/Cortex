@@ -10,19 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from cortex.config.settings import get_settings
+from cortex.monitor import dependencies
 from cortex.monitor.db_manager import DatabaseManager
 from cortex.monitor.routers import alerts, cluster, decisions, health, intents, reports
-
-
-# 全局数据库管理器
-db_manager: DatabaseManager
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """应用生命周期管理"""
-    global db_manager
-
     logger.info("Starting Cortex Monitor...")
 
     # 加载配置
@@ -32,6 +27,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     db_manager = DatabaseManager(settings)
     await db_manager.init_database()
     logger.success("Database initialized")
+
+    # 设置全局数据库管理器
+    dependencies.set_db_manager(db_manager)
 
     # 启动时的其他初始化
     yield
@@ -77,8 +75,3 @@ async def root() -> dict:
         "status": "running",
         "docs": "/docs",
     }
-
-
-def get_db_manager() -> DatabaseManager:
-    """获取数据库管理器（用于依赖注入）"""
-    return db_manager

@@ -58,6 +58,7 @@ class ClaudeConfig(BaseSettings):
     model: str = Field("claude-sonnet-4", description="模型名称")
     max_tokens: int = Field(2000, description="最大 token 数")
     timeout: int = Field(30, description="请求超时时间（秒）")
+    temperature: float = Field(1.0, description="生成温度（0.0-1.0）")
 
     model_config = SettingsConfigDict(env_prefix="ANTHROPIC_")
 

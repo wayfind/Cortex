@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cortex.monitor.app import get_db_manager
+from cortex.monitor.dependencies import get_db_manager
 from cortex.monitor.database import Alert
 
 router = APIRouter()
