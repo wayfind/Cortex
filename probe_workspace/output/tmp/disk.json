@@ -16,27 +16,27 @@
       "mount_point": "/usr/lib/wsl/drivers",
       "filesystem": "9p",
       "total_gb": 299.61,
-      "used_gb": 199.36,
-      "free_gb": 100.26,
-      "percent": 66.54
+      "used_gb": 199.48,
+      "free_gb": 100.14,
+      "percent": 66.58
     },
     {
       "device": "/dev/sdd",
       "mount_point": "/",
       "filesystem": "ext4",
       "total_gb": 1006.85,
-      "used_gb": 75.13,
-      "free_gb": 880.51,
-      "percent": 7.46
+      "used_gb": 75.18,
+      "free_gb": 880.46,
+      "percent": 7.47
     },
     {
       "device": "/dev/sdd",
       "mount_point": "/mnt/wslg/distro",
       "filesystem": "ext4",
       "total_gb": 1006.85,
-      "used_gb": 75.13,
-      "free_gb": 880.51,
-      "percent": 7.46
+      "used_gb": 75.18,
+      "free_gb": 880.46,
+      "percent": 7.47
     },
     {
       "device": "none",
@@ -79,27 +79,27 @@
       "mount_point": "/mnt/c",
       "filesystem": "9p",
       "total_gb": 299.61,
-      "used_gb": 199.36,
-      "free_gb": 100.26,
-      "percent": 66.54
+      "used_gb": 199.48,
+      "free_gb": 100.14,
+      "percent": 66.58
     },
     {
       "device": "D:\\134",
       "mount_point": "/mnt/d",
       "filesystem": "9p",
       "total_gb": 1562.5,
-      "used_gb": 674.59,
-      "free_gb": 887.91,
-      "percent": 43.17
+      "used_gb": 675.81,
+      "free_gb": 886.69,
+      "percent": 43.25
     },
     {
       "device": "/dev/sdd",
       "mount_point": "/snap",
       "filesystem": "ext4",
       "total_gb": 1006.85,
-      "used_gb": 75.13,
-      "free_gb": 880.51,
-      "percent": 7.46
+      "used_gb": 75.18,
+      "free_gb": 880.46,
+      "percent": 7.47
     },
     {
       "device": "snapfuse",
@@ -178,9 +178,9 @@
       "mount_point": "/var/lib/docker",
       "filesystem": "ext4",
       "total_gb": 1006.85,
-      "used_gb": 75.13,
-      "free_gb": 880.51,
-      "percent": 7.46
+      "used_gb": 75.18,
+      "free_gb": 880.46,
+      "percent": 7.47
     }
   ],
   "large_directories": []

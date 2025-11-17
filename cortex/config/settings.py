@@ -3,6 +3,7 @@ Cortex 配置管理
 """
 
 import os
+import secrets
 from typing import Dict, Literal, Optional
 
 from pydantic import Field
@@ -12,8 +13,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AgentConfig(BaseSettings):
     """Agent 基础配置"""
 
-    id: str = Field(..., description="节点唯一标识")
-    name: str = Field(..., description="节点名称")
+    id: str = Field("cortex-agent", description="节点唯一标识")
+    name: str = Field("Cortex Agent", description="节点名称")
     mode: Literal["standalone", "cluster"] = Field("standalone", description="运行模式")
     upstream_monitor_url: Optional[str] = Field(None, description="上级 Monitor URL")
 
@@ -57,7 +58,10 @@ class MonitorConfig(BaseSettings):
     host: str = Field("0.0.0.0", description="监听地址")
     port: int = Field(8000, description="监听端口")
     database_url: str = Field("sqlite:///./cortex.db", description="数据库 URL")
-    registration_token: str = Field(..., description="节点注册密钥")
+    registration_token: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(32),
+        description="节点注册密钥（自动生成）"
+    )
 
     model_config = SettingsConfigDict(env_prefix="CORTEX_MONITOR_")
 
@@ -65,7 +69,7 @@ class MonitorConfig(BaseSettings):
 class ClaudeConfig(BaseSettings):
     """Claude API 配置"""
 
-    api_key: str = Field(..., description="Claude API Key")
+    api_key: Optional[str] = Field(None, description="Claude API Key（运行时必需）")
     model: str = Field("claude-sonnet-4", description="模型名称")
     max_tokens: int = Field(2000, description="最大 token 数")
     timeout: int = Field(30, description="请求超时时间（秒）")
