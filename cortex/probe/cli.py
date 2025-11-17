@@ -1,91 +1,124 @@
 """
 Probe CLI 入口
+
+启动 Probe Web 服务（FastAPI + Uvicorn）
 """
 
-import asyncio
-import signal
+import argparse
+import logging
+import os
 import sys
 from pathlib import Path
 
-from loguru import logger
+import uvicorn
 
-from cortex.config.settings import get_settings
-from cortex.probe.scheduler import ProbeScheduler
+logger = logging.getLogger(__name__)
 
 
-def setup_logger() -> None:
+def setup_logging(level: str = "INFO") -> None:
     """配置日志"""
-    logger.remove()  # 移除默认处理器
-
-    # 添加控制台输出
-    logger.add(
-        sys.stderr,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
-        level="INFO",
-    )
-
-    # 添加文件输出
+    # 创建日志目录
     log_file = Path("logs/probe.log")
     log_file.parent.mkdir(parents=True, exist_ok=True)
-    logger.add(
-        log_file,
-        rotation="1 day",
-        retention="30 days",
-        level="DEBUG",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+
+    # 配置日志格式
+    logging.basicConfig(
+        level=getattr(logging, level.upper()),
+        format="%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s",
+        handlers=[
+            logging.StreamHandler(sys.stderr),
+            logging.FileHandler(log_file)
+        ]
     )
 
 
-async def run_probe_service() -> None:
-    """运行 Probe 服务"""
-    # 加载配置
-    try:
-        settings = get_settings()
-    except Exception as e:
-        logger.error(f"Failed to load settings: {e}")
-        sys.exit(1)
+def parse_args() -> argparse.Namespace:
+    """解析命令行参数"""
+    parser = argparse.ArgumentParser(description="Cortex Probe Web Service")
 
-    # 创建调度器
-    scheduler = ProbeScheduler(settings)
+    parser.add_argument(
+        "--host",
+        type=str,
+        default=None,
+        help="Host to bind (default: from config or 0.0.0.0)"
+    )
 
-    # 设置信号处理
-    shutdown_event = asyncio.Event()
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="Port to bind (default: from config or 8001)"
+    )
 
-    def signal_handler(signum: int, frame: any) -> None:
-        logger.warning(f"Received signal {signum}, shutting down...")
-        shutdown_event.set()
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to config.yaml (default: CORTEX_CONFIG env or config.yaml)"
+    )
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for development"
+    )
 
-    # 启动调度器
-    try:
-        await scheduler.start()
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Log level (default: INFO)"
+    )
 
-        # 等待关闭信号
-        logger.info("Probe service is running. Press Ctrl+C to stop.")
-        await shutdown_event.wait()
-
-    except Exception as e:
-        logger.error(f"Error in probe service: {e}", exc_info=True)
-
-    finally:
-        # 停止调度器
-        await scheduler.stop()
-        logger.info("Probe service stopped")
+    return parser.parse_args()
 
 
 def main() -> None:
     """主入口函数"""
-    setup_logger()
+    args = parse_args()
 
-    logger.info("Starting Cortex Probe...")
+    # 配置日志
+    setup_logging(args.log_level)
+
+    logger.info("Starting Cortex Probe Web Service...")
     logger.info(f"Python version: {sys.version}")
 
+    # 设置配置文件环境变量
+    if args.config:
+        os.environ["CORTEX_CONFIG"] = args.config
+        logger.info(f"Using config file: {args.config}")
+
+    # 加载配置以获取默认值
     try:
-        asyncio.run(run_probe_service())
+        from cortex.config import get_settings
+        settings = get_settings()
+
+        host = args.host or settings.probe.host
+        port = args.port or settings.probe.port
+
+        logger.info(f"Binding to {host}:{port}")
+        logger.info(f"Workspace: {settings.probe.workspace or 'probe_workspace/'}")
+        logger.info(f"Schedule: {settings.probe.schedule}")
+
+    except Exception as e:
+        logger.error(f"Failed to load settings: {e}")
+        sys.exit(1)
+
+    # 启动 Uvicorn 服务器
+    try:
+        uvicorn.run(
+            "cortex.probe.app:app",
+            host=host,
+            port=port,
+            reload=args.reload,
+            log_level=args.log_level.lower(),
+            access_log=True
+        )
+
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, exiting...")
+
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)
         sys.exit(1)

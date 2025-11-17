@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "memory": {
+    "total_gb": 15.53,
+    "used_gb": 10.53,
+    "available_gb": 5.01,
+    "buffers_gb": 0.2,
+    "cached_gb": 1.43,
+    "percent": 67.77,
+    "swap_total_gb": 4.0,
+    "swap_used_gb": 0.0,
+    "swap_percent": 0.0
+  },
+  "top_processes": []
+}

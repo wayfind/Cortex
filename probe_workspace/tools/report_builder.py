@@ -127,11 +127,28 @@ def extract_metrics_from_checks(
 
     # 内存指标
     if memory_result and memory_result.get("status") == "ok":
-        metrics["memory_percent"] = memory_result.get("memory_percent", 0.0)
+        memory_data = memory_result.get("memory", {})
+        metrics["memory_percent"] = memory_data.get("percent", 0.0)
 
     # CPU 指标
     if cpu_result and cpu_result.get("status") == "ok":
         metrics["cpu_percent"] = cpu_result.get("cpu_percent", 0.0)
+
+        # 负载平均值（作为列表/元组）
+        load_avg = cpu_result.get("load_average", {})
+        metrics["load_average"] = [
+            load_avg.get("1min", 0.0),
+            load_avg.get("5min", 0.0),
+            load_avg.get("15min", 0.0)
+        ]
+
+    # 系统运行时间（从 /proc/uptime 获取，转换为整数）
+    try:
+        with open("/proc/uptime", "r") as f:
+            uptime_seconds = int(float(f.read().split()[0]))
+            metrics["uptime_seconds"] = uptime_seconds
+    except (FileNotFoundError, ValueError, IndexError):
+        metrics["uptime_seconds"] = 0
 
     return metrics
 

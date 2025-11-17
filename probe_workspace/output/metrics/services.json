@@ -1,0 +1,10 @@
+{
+  "status": "ok",
+  "summary": {
+    "total": 4,
+    "active": 3,
+    "inactive": 1,
+    "failed": 0
+  },
+  "failed_services": []
+}

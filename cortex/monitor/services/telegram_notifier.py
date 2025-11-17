@@ -9,6 +9,7 @@ import httpx
 from loguru import logger
 
 from cortex.config.settings import Settings
+from cortex.common.retry import retry_async, FAST_RETRY_CONFIG
 from cortex.monitor.database import Alert
 
 
@@ -43,7 +44,7 @@ class TelegramNotifier:
 
     async def send_message(self, message: str, parse_mode: str = "Markdown") -> bool:
         """
-        发送消息到 Telegram
+        发送消息到 Telegram（带重试机制）
 
         Args:
             message: 消息文本
@@ -56,7 +57,8 @@ class TelegramNotifier:
             logger.debug("Telegram disabled, skipping message send")
             return False
 
-        try:
+        # 定义实际的请求函数（用于重试）
+        async def _make_request():
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
                     f"{self.api_base_url}/sendMessage",
@@ -69,20 +71,26 @@ class TelegramNotifier:
                 )
 
                 response.raise_for_status()
-                result = response.json()
+                return response.json()
 
-                if result.get("ok"):
-                    logger.info("Telegram message sent successfully")
-                    return True
-                else:
-                    logger.error(f"Telegram API error: {result}")
-                    return False
+        try:
+            # 使用快速重试策略（Telegram 通知一般延迟敏感）
+            result = await retry_async(_make_request, config=FAST_RETRY_CONFIG)
+
+            if result.get("ok"):
+                logger.info("Telegram message sent successfully")
+                return True
+            else:
+                logger.error(f"Telegram API error: {result}")
+                return False
 
         except httpx.HTTPError as e:
-            logger.error(f"HTTP error sending Telegram message: {e}")
+            logger.error(f"HTTP error sending Telegram message after retries: {e}")
             return False
         except Exception as e:
-            logger.error(f"Error sending Telegram message: {e}", exc_info=True)
+            logger.error(
+                f"Error sending Telegram message after retries: {e}", exc_info=True
+            )
             return False
 
     async def send_alert(self, alert: Alert) -> bool:

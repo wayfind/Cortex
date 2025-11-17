@@ -2,54 +2,101 @@
 
 ## 1. 项目阶段划分
 
-### Phase 1: 基础框架搭建（2-3 周）
+### Phase 1: 基础框架搭建（2-3 周）✅ 已完成
 
 **目标**：建立可运行的独立模式 Cortex Agent
 
 #### 核心任务
 
-1. **项目初始化**
+1. **项目初始化** ✅
    - 创建项目目录结构
    - 配置 Python 开发环境（Poetry/pip）
    - 配置 Git 仓库和分支策略
    - 编写项目文档框架
    - 设置 CI/CD 基础配置
 
-2. **Probe 基础实现**
-   - 实现 Cron 调度器（APScheduler）
-   - 集成 Claude SDK
-   - 实现基础巡检逻辑（系统健康、服务状态）
-   - L1 问题自动修复（简单场景：磁盘清理、日志轮转）
-   - 数据上报格式化
-
-3. **Monitor 基础框架**
+2. **Monitor 基础框架** ✅
    - FastAPI 应用搭建
    - 数据库初始化（SQLite + SQLAlchemy）
    - 基础 API 端点实现（/api/v1/reports, /api/v1/heartbeat）
    - 数据接收与存储逻辑
 
-4. **Intent-Engine 集成**
+3. **Intent-Engine 集成** ✅
    - MCP 工具配置
-   - 意图记录集成到 Probe
    - 意图记录集成到 Monitor
 
-#### 可交付成果
-
-- [ ] 独立模式 Agent 可运行
-- [ ] 基础 API 文档（OpenAPI/Swagger）
-- [ ] 单元测试覆盖率 > 60%
-- [ ] 项目 README 和开发文档
-
-#### 技术里程碑
-
-- Probe 可定时执行巡检并上报数据
-- Monitor 可接收并存储上报数据
-- 简单的 L1 问题可自动修复
-- Intent-Engine 可记录操作历史
+4. **集群模式基础实现** ✅
+   - 节点注册与心跳机制
+   - 层级结构管理
+   - 跨节点通信
 
 ---
 
-### Phase 2: 集群功能开发（3-4 周）
+### Phase 1.5: Probe 架构重新设计（1 周）✅ 已完成
+
+**目标**：将 Probe 重新设计为持久化 Web 服务进程
+
+#### 背景
+
+原有 Probe 设计问题：
+- ❌ 通过 cron 触发，每次执行完退出
+- ❌ 没有 Web 服务接口
+- ❌ 无法实时查询状态或手动触发
+
+新架构设计：
+- ✅ 持久化 FastAPI Web 服务进程
+- ✅ 内部 APScheduler 调度（无需 cron）
+- ✅ 周期性调用 `claude -p` 执行文档驱动巡检
+- ✅ REST API + WebSocket 实时通信
+
+#### 核心任务
+
+1. **FastAPI Web 服务** ✅
+   - 完整的 REST API 端点
+   - WebSocket 实时通信
+   - 健康检查和状态查询
+
+2. **APScheduler 调度服务** ✅
+   - Cron 表达式调度
+   - 执行历史管理
+   - 暂停/恢复控制
+
+3. **Claude 执行器** ✅
+   - 异步执行 `claude -p`
+   - 超时处理和状态跟踪
+   - 报告解析
+
+4. **WebSocket 管理器** ✅
+   - 连接管理
+   - 事件广播
+
+5. **CLI 入口重构** ✅
+   - uvicorn 服务器启动
+   - 命令行参数解析
+
+6. **部署支持** ✅
+   - systemd 服务文件
+   - 部署文档
+   - 验证脚本
+
+#### 可交付成果
+
+- [x] Probe Web 服务可运行
+- [x] 完整的 REST API
+- [x] WebSocket 实时推送
+- [x] systemd 服务配置
+- [x] 部署和验证文档
+
+#### 技术里程碑
+
+- Probe 作为常驻进程运行
+- 周期性自动执行 `claude -p` 巡检
+- 提供完整的管理 API
+- WebSocket 实时状态更新
+
+---
+
+### Phase 2: 集群功能开发（3-4 周）✅ 已完成
 
 **目标**：实现完整的集群模式和决策引擎
 
@@ -96,59 +143,64 @@
 
 ---
 
-### Phase 3: Web UI 开发（3-4 周）
+### Phase 3: Web UI 开发（3-4 周）✅ 已完成
 
 **目标**：提供完整的可视化管理界面
 
 #### 核心任务
 
-1. **前端项目搭建**
+1. **前端项目搭建** ✅
    - React + TypeScript 项目初始化（Vite）
-   - UI 组件库集成（Ant Design 或 shadcn/ui）
-   - API 客户端封装（axios + TanStack Query）
+   - UI 组件库集成（Ant Design）
+   - API 客户端封装（axios）
    - 路由配置（React Router）
 
-2. **全局仪表盘**
-   - 集群状态矩阵组件
-   - 实时告警流组件
-   - 关键指标汇总卡片
-   - 集群拓扑图（可选：使用 D3.js 或 Cytoscape.js）
+2. **全局仪表盘** ✅
+   - 集群状态统计卡片（Total/Online/Offline/Degraded）
+   - 实时告警表格
+   - 集群拓扑预览（节点总数、层级数）
+   - Live 连接状态指示器
 
-3. **节点详情页**
-   - 节点信息展示
-   - 健康指标图表（时间序列，使用 Recharts 或 ECharts）
-   - 事件时间线组件
-   - 操作日志表格
-   - 决策历史表格
+3. **节点详情页** ✅
+   - 节点信息展示（Basic Information 表格）
+   - Tabs 框架（Alerts/Inspection Reports/Metrics）
+   - Back to Nodes 导航
 
-4. **告警中心页**
-   - 告警列表（可筛选、排序、搜索）
-   - 告警详情展示
-   - 告警确认/关闭功能
+4. **告警中心页** ✅
+   - 告警列表表格
+   - 级别筛选（All/L1/L2/L3）
+   - 状态筛选（All/new/acknowledged/resolved）
 
-5. **自身状态页**
-   - 当前 Monitor 节点健康状况
-   - Monitor 服务状态
-   - 数据库状态和统计信息
+5. **设置页** ✅
+   - API Configuration 显示
+   - Application Info 显示
+   - About 项目描述
 
-6. **实时通信**
-   - WebSocket 集成（socket.io-client）
-   - 实时数据推送处理
-   - UI 自动更新机制
+6. **实时通信** ✅
+   - WebSocket 集成（自定义 useWebSocket hook）
+   - 4 种事件类型广播（report/alert/decision/status）
+   - Auto-reconnect 机制
+   - UI 自动更新 + Toast 通知
 
 #### 可交付成果
 
-- [ ] 完整的 Web UI
-- [ ] 响应式设计支持（桌面 + 平板）
-- [ ] 实时数据更新
-- [ ] 用户操作手册
+- [x] 完整的 Web UI
+- [x] 响应式设计支持（桌面）
+- [x] 实时数据更新
+- [x] UI 测试套件文档
 
 #### 技术里程碑
 
-- 仪表盘可显示集群所有节点状态
-- 点击节点可下钻查看详细信息
-- 告警列表可实时更新
-- WebSocket 连接稳定，数据推送及时
+- ✅ 仪表盘可显示集群所有节点状态
+- ✅ 点击节点可下钻查看详细信息
+- ✅ 告警列表可实时更新
+- ✅ WebSocket 连接稳定，数据推送及时
+
+#### 完成文档
+
+- [x] `frontend/UI_TEST_SUITE.md` - UI 测试套件
+- [x] `docs/WEBSOCKET_IMPLEMENTATION.md` - WebSocket 实现文档
+- [x] `docs/PHASE3_COMPLETION_SUMMARY.md` - Phase 3 完成总结
 
 ---
 
@@ -484,7 +536,7 @@ TypeScript/React:
    - 意图记录
    - 历史追溯
 
-7. **基础 Web UI（仪表盘）** ✅ Phase 3
+7. **基础 Web UI（仪表盘）** ✅ Phase 3 已完成
    - 集群状态展示
    - 节点列表
 
@@ -492,17 +544,18 @@ TypeScript/React:
 
 这些功能显著提升用户体验，建议在 v1.0 或 v1.1 完成。
 
-1. **节点详情页** ✅ Phase 3
+1. **节点详情页** ✅ Phase 3 已完成
    - 下钻分析
-   - 历史数据图表
+   - 基础框架（历史数据图表待增强）
 
-2. **告警中心** ✅ Phase 3
+2. **告警中心** ✅ Phase 3 已完成
    - 告警列表
    - 筛选排序
 
-3. **WebSocket 实时更新** ✅ Phase 3
+3. **WebSocket 实时更新** ✅ Phase 3 已完成
    - 实时推送
    - UI 自动刷新
+   - Auto-reconnect
 
 4. **认证与授权** ✅ Phase 4
    - API Key 管理
@@ -581,13 +634,13 @@ TypeScript/React:
 
 ### 4.1 时间表（单人开发）
 
-| 阶段 | 任务 | 预计时间 | 累计时间 | 关键里程碑 |
-|------|------|---------|---------|----------|
-| **Phase 1** | 项目初始化、Probe、Monitor、Intent-Engine | 2-3 周 | 3 周 | 独立模式可运行 |
-| **Phase 2** | 集群模式、L2 决策、L3 告警 | 3-4 周 | 7 周 | 集群模式可用 |
-| **Phase 3** | Web UI 开发 | 3-4 周 | 11 周 | 完整 UI 可用 |
-| **Phase 4** | 安全、性能、容错优化 | 2-3 周 | 14 周 | 生产就绪 |
-| **Phase 5** | 部署工具、文档、测试 | 1-2 周 | 16 周 | v1.0 发布 |
+| 阶段 | 任务 | 预计时间 | 累计时间 | 关键里程碑 | 状态 |
+|------|------|---------|---------|----------|------|
+| **Phase 1** | 项目初始化、Probe、Monitor、Intent-Engine | 2-3 周 | 3 周 | 独立模式可运行 | ✅ 已完成 |
+| **Phase 2** | 集群模式、L2 决策、L3 告警 | 3-4 周 | 7 周 | 集群模式可用 | ✅ 已完成 |
+| **Phase 3** | Web UI 开发 | 3-4 周 | 11 周 | 完整 UI 可用 | ✅ 已完成 |
+| **Phase 4** | 安全、性能、容错优化 | 2-3 周 | 14 周 | 生产就绪 | ⏳ 待开始 |
+| **Phase 5** | 部署工具、文档、测试 | 1-2 周 | 16 周 | v1.0 发布 | ⏳ 待开始 |
 
 **总计**: 约 16 周（4 个月）
 
@@ -605,11 +658,11 @@ TypeScript/React:
 
 ### 4.3 关键里程碑
 
-- **Week 2-3**: Phase 1 完成，独立模式 Demo 可演示
-- **Week 7**: Phase 2 完成，集群模式可用，核心功能完整
-- **Week 11**: Phase 3 完成，完整的 Web UI，用户可操作
-- **Week 14**: Phase 4 完成，性能和安全优化，生产就绪
-- **Week 16**: Phase 5 完成，v1.0 正式发布
+- **Week 2-3**: ✅ Phase 1 完成，独立模式 Demo 可演示
+- **Week 7**: ✅ Phase 2 完成，集群模式可用，核心功能完整
+- **Week 11**: ✅ Phase 3 完成，完整的 Web UI，用户可操作（**当前状态**）
+- **Week 14**: ⏳ Phase 4 完成，性能和安全优化，生产就绪
+- **Week 16**: ⏳ Phase 5 完成，v1.0 正式发布
 
 ---
 

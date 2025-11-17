@@ -1,0 +1,22 @@
+{
+  "status": "ok",
+  "summary": {
+    "total": 4,
+    "active": 3,
+    "inactive": 1
+  },
+  "services": [
+    {
+      "name": "cron",
+      "status": "active"
+    },
+    {
+      "name": "rsyslog",
+      "status": "active"
+    },
+    {
+      "name": "systemd-journald",
+      "status": "active"
+    }
+  ]
+}

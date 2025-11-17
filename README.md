@@ -5,6 +5,9 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-v1.0.0--rc1-blue)](https://github.com/cortex-ops/cortex/releases/tag/v1.0.0-rc1)
+[![Tests](https://img.shields.io/badge/tests-196%20passed-brightgreen)](./tests/)
+[![Coverage](https://img.shields.io/badge/coverage-61%25-yellow)](./htmlcov/)
 
 ## 概述
 
@@ -21,7 +24,33 @@ Cortex 是一个创新的智能运维系统，每个节点都是一个独立的 
 
 ## 快速开始
 
-### 环境要求
+### 🐳 方式 1: Docker Compose（推荐）
+
+最快的部署方式，无需安装依赖：
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/cortex-ops/cortex.git
+cd cortex
+
+# 2. 配置环境变量
+cp .env.example .env
+vim .env  # 编辑 ANTHROPIC_API_KEY 等必需配置
+
+# 3. 启动所有服务
+docker-compose up -d
+
+# 4. 访问服务
+# Web UI: http://localhost:3000
+# Monitor API: http://localhost:8000
+# Probe API: http://localhost:8001
+```
+
+详细说明请参考 [Docker 部署指南](./docs/DOCKER_DEPLOYMENT.md)。
+
+### 📦 方式 2: 传统安装
+
+#### 环境要求
 
 **Monitor**：
 - Python 3.11+
@@ -33,7 +62,7 @@ Cortex 是一个创新的智能运维系统，每个节点都是一个独立的 
 - [Claude Code](https://code.claude.com) CLI
 - 系统工具：bash, cron
 
-### 安装
+#### 安装步骤
 
 ```bash
 # 克隆仓库
@@ -54,19 +83,57 @@ pip install -e ".[dev]"
 
 ### 配置
 
-复制配置示例并修改：
+Cortex 支持两种配置方式：**环境变量**（推荐）和 YAML 配置文件。
+
+#### 方式 1: 环境变量配置（推荐）⭐
+
+```bash
+# 快速设置（自动生成安全密钥）
+python scripts/setup_env.py
+
+# 或手动复制
+cp .env.example .env
+```
+
+编辑 `.env` 文件，配置必要的参数：
+
+```bash
+# Agent 配置
+CORTEX_AGENT_ID=node-001
+CORTEX_AGENT_NAME=My First Node
+CORTEX_AGENT_MODE=standalone
+
+# Claude API（必需）
+ANTHROPIC_API_KEY=sk-ant-your-api-key-here
+
+# Monitor 配置
+CORTEX_MONITOR_HOST=0.0.0.0
+CORTEX_MONITOR_PORT=8000
+
+# 认证密钥（已自动生成安全随机值）
+CORTEX_AUTH_SECRET_KEY=<自动生成>
+CORTEX_MONITOR_REGISTRATION_TOKEN=<自动生成>
+```
+
+**优势**：
+- ✅ 敏感信息不会被提交到 Git（`.env` 已在 `.gitignore`）
+- ✅ 自动生成安全的随机密钥
+- ✅ 符合 12-Factor App 最佳实践
+- ✅ 便于容器化部署
+
+#### 方式 2: YAML 配置文件
 
 ```bash
 cp config.example.yaml config.yaml
 ```
 
-编辑 `config.yaml`，填入必要的配置：
+编辑 `config.yaml`：
 
 ```yaml
 agent:
   id: "node-001"
   name: "My First Node"
-  mode: "standalone"  # 或 "cluster"
+  mode: "standalone"
 
 claude:
   api_key: "your-claude-api-key"
@@ -75,6 +142,21 @@ monitor:
   host: "0.0.0.0"
   port: 8000
 ```
+
+**注意**：YAML 文件中的敏感信息会覆盖环境变量（不推荐）。
+
+#### 初始化认证系统
+
+```bash
+# 创建默认 admin 用户和 API Key
+python scripts/init_auth.py
+```
+
+这将创建：
+- Admin 用户（用户名: `admin`，默认密码: `admin123`）
+- Admin API Key（显示一次，请妥善保存）
+
+**⚠️ 安全提醒**：生产环境部署前，请立即修改默认密码！
 
 ### 运行
 
@@ -88,34 +170,32 @@ cortex-monitor
 http://localhost:8000
 ```
 
-#### Probe（文档驱动模式）⭐ 推荐
+#### Probe（Web 服务模式）⭐ 推荐
 
 ```bash
-# 一键安装
-cd probe_workspace
-sudo ./install.sh
+# 启动 Probe Web 服务
+cortex-probe --config config.yaml
 
-# 配置 Agent
-sudo nano /etc/cortex/config.yaml
+# 或使用 systemd
+sudo systemctl start cortex-probe
 
-# 手动运行测试
-sudo /opt/cortex/probe/run_probe.sh
+# 访问 API
+curl http://localhost:8001/health
+curl http://localhost:8001/status
 
-# 查看结果
-cat /opt/cortex/probe/output/report.json
+# 手动触发巡检
+curl -X POST http://localhost:8001/execute
 ```
 
-Cron 会自动定期执行巡检（安装时配置）。
+Probe 作为常驻 Web 服务进程运行，通过内部 APScheduler 周期性执行巡检。
 
-#### Probe（旧版，已弃用）
-
-```bash
-cortex-probe  # 不推荐使用
-```
+**部署文档**：
+- [系统服务部署](deployment/DEPLOYMENT.md) - systemd 服务配置
+- [验证指南](docs/probe_validation.md) - 完整验证步骤
 
 **集群模式**：
 
-参见 [部署文档](docs/deployment.md)
+参见 [集群实现文档](CLUSTER_IMPLEMENTATION.md)
 
 ## 架构设计
 
@@ -127,8 +207,10 @@ cortex-probe  # 不推荐使用
 │                                     │
 │  ┌──────────────────────────────┐  │
 │  │  Probe (探测功能)             │  │
+│  │  - FastAPI Web 服务           │  │
 │  │  - 文档驱动 (claude -p)       │  │
-│  │  - Cron 定时触发              │  │
+│  │  - APScheduler 内部调度       │  │
+│  │  - WebSocket 实时推送         │  │
 │  │  - LLM 智能巡检               │  │
 │  │  - L1 自主修复                │  │
 │  │  - L2/L3 问题上报             │  │
@@ -136,6 +218,7 @@ cortex-probe  # 不推荐使用
 │                                     │
 │  ┌──────────────────────────────┐  │
 │  │  Monitor (监控功能)           │  │
+│  │  - FastAPI Web 服务           │  │
 │  │  - 数据聚合中心               │  │
 │  │  - L2 决策引擎 (LLM)          │  │
 │  │  - L3 告警聚合                │  │
@@ -144,32 +227,55 @@ cortex-probe  # 不推荐使用
 └─────────────────────────────────────┘
 ```
 
-### Probe 文档驱动模式
+### Probe 架构
 
-Cortex Probe 采用创新的**文档驱动**架构，通过 `claude -p` 执行：
+Cortex Probe 采用**文档驱动 + Web 服务**的创新架构：
 
 ```
-┌────────────┐     ┌────────────┐     ┌────────────┐
-│ Markdown   │ →   │ LLM 理解   │ →   │ 自动执行   │
-│ 巡检文档   │     │ 和决策     │     │ 和上报     │
-└────────────┘     └────────────┘     └────────────┘
+┌────────────────────────────────────────────┐
+│         Probe Web 服务 (FastAPI)            │
+│                                            │
+│  REST API    WebSocket    APScheduler      │
+│     │            │            │            │
+│     └────────────┴────────────┘            │
+│                  ▼                         │
+│           Claude Executor                  │
+│                  │                         │
+└──────────────────┼─────────────────────────┘
+                   ▼
+         ┌─────────────────┐
+         │   claude -p     │
+         │  文档驱动巡检    │
+         └─────────────────┘
 ```
 
-**核心优势**：
-- 📄 **零代码扩展** - 新增巡检项只需添加 .md 文件（5分钟）
-- 🤖 **智能决策** - LLM 根据上下文自主判断问题级别
-- 🔧 **自动修复** - L1 问题零人工干预
-- 📊 **易于维护** - 运维人员可直接编辑文档
+**核心特性**：
+- 🌐 **Web 服务** - 持久化进程，提供 REST API 和 WebSocket
+- 📄 **文档驱动** - 巡检逻辑由 Markdown 文档定义
+- ⏰ **内部调度** - APScheduler 管理定时任务（无需 cron）
+- 🤖 **LLM 执行** - 通过 `claude -p` 智能执行巡检
+- 📊 **实时状态** - WebSocket 推送巡检进度和结果
+- 🔧 **灵活控制** - API 支持手动触发、暂停/恢复
 
-**示例**：添加网络监控
+**API 示例**：
 ```bash
-cd /opt/cortex/probe/inspections
-cp TEMPLATE.md network.md  # 复制模板
-nano network.md            # 编辑巡检要求
-# 完成！下次自动生效
+# 查询状态
+GET /status
+
+# 手动触发巡检
+POST /execute
+
+# 获取报告列表
+GET /reports
+
+# WebSocket 连接
+WS /ws
 ```
 
-**详细文档**：[Probe 工作流程详解](docs/probe_workflow.md)
+**详细文档**：
+- [Probe 工作流程详解](docs/probe_workflow.md)
+- [API 验证指南](docs/probe_validation.md)
+- [部署指南](deployment/DEPLOYMENT.md)
 
 ### 问题分级
 
@@ -206,20 +312,24 @@ nano network.md            # 编辑巡检要求
 ```
 cortex/
 ├── cortex/              # 主代码包
-│   ├── probe/          # Probe 模块（旧版，已标记弃用）
+│   ├── probe/          # Probe 模块 ⭐ 新架构
+│   │   ├── app.py                # FastAPI 应用
+│   │   ├── scheduler_service.py  # APScheduler 调度
+│   │   ├── claude_executor.py    # Claude -p 执行器
+│   │   ├── websocket_manager.py  # WebSocket 管理
+│   │   └── cli.py                # CLI 入口
 │   ├── monitor/        # Monitor 模块
 │   ├── common/         # 共享代码
 │   └── config/         # 配置管理
-├── probe_workspace/    # 新版 Probe - 文档驱动模式 ⭐
+├── probe_workspace/    # 文档驱动工作区
 │   ├── CLAUDE.md       # Probe Agent 角色定义
-│   ├── README.md       # 使用手册
-│   ├── install.sh      # 一键安装脚本
-│   ├── run_probe.sh    # 执行脚本
 │   ├── inspections/    # 巡检要求文档（Markdown）
 │   └── tools/          # 检查和修复工具（Python）
+├── deployment/         # 部署文件
+│   ├── cortex-probe.service  # systemd 服务
+│   └── DEPLOYMENT.md         # 部署文档
 ├── tests/              # 测试代码
-├── frontend/           # Web UI（React + TypeScript）
-├── scripts/            # 部署和工具脚本
+├── scripts/            # 验证和工具脚本
 ├── docs/               # 文档
 └── .github/            # CI/CD 配置
 ```
@@ -276,8 +386,9 @@ mypy cortex
 ## 路线图
 
 - [x] 项目初始化
-- [ ] Phase 1: 基础框架（Probe + Monitor + Intent-Engine）
-- [ ] Phase 2: 集群功能（L2 决策 + L3 告警）
+- [x] Phase 1: 基础框架（Monitor + Intent-Engine + 集群基础）
+- [x] Phase 1.5: Probe 架构重新设计（Web 服务 + APScheduler + 文档驱动）
+- [x] Phase 2: 集群功能完善（L2 决策 + L3 告警 + 心跳检测）
 - [ ] Phase 3: Web UI
 - [ ] Phase 4: 性能优化与安全加固
 - [ ] Phase 5: v1.0 发布

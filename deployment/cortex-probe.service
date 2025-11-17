@@ -1,0 +1,41 @@
+[Unit]
+Description=Cortex Probe Web Service
+Documentation=https://github.com/yourusername/cortex
+After=network.target
+
+[Service]
+Type=simple
+User=cortex
+Group=cortex
+WorkingDirectory=/opt/cortex
+Environment="PATH=/opt/cortex/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="CORTEX_CONFIG=/etc/cortex/config.yaml"
+
+# 启动 Probe Web 服务
+ExecStart=/opt/cortex/venv/bin/cortex-probe --config /etc/cortex/config.yaml
+
+# 进程管理
+Restart=always
+RestartSec=10
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# 资源限制
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/cortex/logs /opt/cortex/probe_workspace/output
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cortex-probe
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+{
+  "cpu_percent": 0.61,
+  "memory_percent": 67.55,
+  "disk_percent": 64.73,
+  "swap_percent": 0.0,
+  "load_avg_1min": 0.09,
+  "load_avg_5min": 0.11,
+  "load_avg_15min": 0.14
+}

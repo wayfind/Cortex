@@ -3,7 +3,7 @@
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import AsyncGenerator, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
@@ -15,6 +15,12 @@ from cortex.monitor.dependencies import get_db_manager
 from cortex.monitor.database import Alert
 
 router = APIRouter()
+
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """获取数据库会话（依赖注入）"""
+    async for session in get_db_manager().get_session():
+        yield session
 
 
 class AlertAcknowledgement(BaseModel):
@@ -38,7 +44,7 @@ async def list_alerts(
     severity: Optional[str] = Query(None, description="过滤严重性: low/medium/high/critical"),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     查询告警列表
@@ -96,7 +102,7 @@ async def list_alerts(
 @router.get("/alerts/{alert_id}")
 async def get_alert(
     alert_id: int,
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     获取单个告警详情
@@ -142,7 +148,7 @@ async def get_alert(
 async def acknowledge_alert(
     alert_id: int,
     ack: AlertAcknowledgement,
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     确认告警
@@ -191,7 +197,7 @@ async def acknowledge_alert(
 async def resolve_alert(
     alert_id: int,
     resolution: AlertResolution,
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     解决告警

@@ -30,7 +30,7 @@ class TestProbeConfigLoading:
         """测试从扁平字典加载配置"""
         config_dict = {
             "schedule": "*/10 * * * *",
-            "timeout": 600,
+            "timeout_seconds": 600,
             "check_system_health": True,
             "check_service_status": False,
             "check_log_analysis": True,
@@ -51,7 +51,7 @@ class TestProbeConfigLoading:
         """测试拒绝嵌套的 thresholds 结构"""
         config_dict = {
             "schedule": "*/5 * * * *",
-            "timeout": 300,
+            "timeout_seconds": 300,
             "thresholds": {  # 这应该被拒绝
                 "cpu_percent": 80.0,
                 "memory_percent": 85.0,
@@ -65,7 +65,7 @@ class TestProbeConfigLoading:
         """测试拒绝嵌套的 checks 结构"""
         config_dict = {
             "schedule": "*/5 * * * *",
-            "timeout": 300,
+            "timeout_seconds": 300,
             "checks": {  # 这应该被拒绝
                 "system_health": True,
                 "service_status": False,
@@ -79,8 +79,8 @@ class TestProbeConfigLoading:
         """测试默认值"""
         config = ProbeConfig()
 
-        assert config.schedule == "*/5 * * * *"
-        assert config.timeout == 300
+        assert config.schedule == "0 * * * *"
+        assert config.timeout_seconds == 300
         assert config.check_system_health is True
         assert config.threshold_cpu_percent == 80.0
 
@@ -133,7 +133,7 @@ agent:
 
 probe:
   schedule: "*/5 * * * *"
-  timeout: 300
+  timeout_seconds: 300
   check_system_health: true
   check_service_status: true
   check_log_analysis: true
@@ -164,7 +164,7 @@ intent_engine:
 
 logging:
   level: "INFO"
-  format: "text"
+  format: "standard"
 """
 
         # 创建临时 YAML 文件
@@ -198,7 +198,7 @@ agent:
 
 probe:
   schedule: "*/5 * * * *"
-  timeout: 300
+  timeout_seconds: 300
   thresholds:
     cpu_percent: 80.0
     memory_percent: 85.0

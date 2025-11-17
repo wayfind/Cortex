@@ -1,0 +1,13 @@
+{
+  "status": "ok",
+  "max_usage_percent": 100.0,
+  "main_partition": {
+    "device": "/dev/sdd",
+    "mount_point": "/",
+    "total_gb": 1006.85,
+    "used_gb": 75.16,
+    "free_gb": 880.48,
+    "percent": 7.46
+  },
+  "note": "100% usage on snap filesystems is expected behavior"
+}

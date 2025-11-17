@@ -1,0 +1,39 @@
+{
+  "agent_id": "test-node-001",
+  "timestamp": "2025-11-16T11:45:00Z",
+  "status": "warning",
+  "metrics": {
+    "cpu_percent": 75.8,
+    "memory_percent": 88.5,
+    "disk_percent": 85.2,
+    "load_average": [3.5, 3.2, 2.8],
+    "uptime_seconds": 864000
+  },
+  "issues": [
+    {
+      "level": "L2",
+      "type": "high_memory",
+      "description": "Memory usage at 88.5%, approaching threshold",
+      "severity": "medium",
+      "proposed_fix": "Restart memory-intensive services",
+      "risk_assessment": "Medium risk - brief service interruption",
+      "details": {
+        "threshold": 85.0,
+        "current": 88.5
+      }
+    }
+  ],
+  "actions_taken": [
+    {
+      "level": "L1",
+      "action": "cleaned_temp_files",
+      "result": "success",
+      "details": "Freed 1.2GB from /tmp",
+      "timestamp": "2025-11-16T11:44:30Z"
+    }
+  ],
+  "metadata": {
+    "probe_version": "1.0.0-文档驱动",
+    "test": "warning_scenario"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "status": "ok",
+  "max_usage_percent": 66.09,
+  "main_partition": {
+    "device": "/dev/sdd",
+    "mount_point": "/",
+    "total_gb": 1006.85,
+    "used_gb": 75.11,
+    "free_gb": 880.52,
+    "percent": 7.46
+  }
+}

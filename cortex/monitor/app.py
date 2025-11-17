@@ -5,15 +5,16 @@ Monitor FastAPI 应用主文件
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from cortex.config.settings import get_settings
 from cortex.monitor import dependencies
 from cortex.monitor.db_manager import DatabaseManager
-from cortex.monitor.routers import alerts, cluster, decisions, health, intents, reports
+from cortex.monitor.routers import alerts, auth, cluster, decisions, health, intents, reports
 from cortex.monitor.services.heartbeat_checker import HeartbeatChecker
+from cortex.monitor.websocket_manager import WebSocketManager
 
 
 @asynccontextmanager
@@ -31,6 +32,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 设置全局数据库管理器
     dependencies.set_db_manager(db_manager)
+
+    # 初始化 WebSocket 管理器
+    ws_manager = WebSocketManager()
+    dependencies.set_ws_manager(ws_manager)
+    logger.success("WebSocket manager initialized")
 
     # 启动心跳检测器（5 分钟超时，每 60 秒检查一次）
     heartbeat_checker = HeartbeatChecker(db_manager, timeout_minutes=5, check_interval_seconds=60)
@@ -67,6 +73,7 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(health.router, tags=["health"])
+app.include_router(auth.router, tags=["authentication"])
 app.include_router(reports.router, prefix="/api/v1", tags=["reports"])
 app.include_router(decisions.router, prefix="/api/v1", tags=["decisions"])
 app.include_router(cluster.router, prefix="/api/v1", tags=["cluster"])
@@ -83,3 +90,17 @@ async def root() -> dict:
         "status": "running",
         "docs": "/docs",
     }
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket 连接端点，用于实时推送事件到前端"""
+    ws_manager = dependencies.get_ws_manager()
+    await ws_manager.connect(websocket)
+    try:
+        # 保持连接，接收客户端消息（主要用于心跳检测）
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+        logger.info("WebSocket client disconnected")

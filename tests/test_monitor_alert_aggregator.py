@@ -3,28 +3,19 @@ AlertAggregator 测试
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import select
 
 from cortex.common.models import IssueReport
-from cortex.config.settings import Settings
 from cortex.monitor.database import Alert
 from cortex.monitor.services.alert_aggregator import AlertAggregator
 
 
 @pytest.fixture
-def mock_settings():
-    """创建 Mock 配置"""
-    settings = MagicMock(spec=Settings)
-    return settings
-
-
-@pytest.fixture
-def alert_aggregator(mock_settings):
-    """创建 AlertAggregator 实例"""
-    return AlertAggregator(mock_settings)
+def alert_aggregator(test_settings):
+    """创建 AlertAggregator 实例（使用真实的测试配置）"""
+    return AlertAggregator(test_settings)
 
 
 @pytest.fixture

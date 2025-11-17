@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cortex.common.cache import invalidate_cache_pattern, with_cache
 from cortex.config.settings import get_settings
 from cortex.monitor.dependencies import get_db_manager
 from cortex.monitor.database import Agent, Report
@@ -80,6 +81,10 @@ async def register_agent(
 
             logger.info(f"Agent updated: {agent_reg.agent_id} ({agent_reg.name})")
 
+            # 清除相关缓存
+            await invalidate_cache_pattern("agents:")
+            await invalidate_cache_pattern("cluster:")
+
             return {
                 "success": True,
                 "data": {
@@ -110,6 +115,10 @@ async def register_agent(
 
         logger.info(f"New agent registered: {agent_reg.agent_id} ({agent_reg.name})")
 
+        # 清除相关缓存
+        await invalidate_cache_pattern("agents:")
+        await invalidate_cache_pattern("cluster:")
+
         return {
             "success": True,
             "data": {
@@ -131,13 +140,14 @@ async def register_agent(
 
 
 @router.get("/agents")
+@with_cache(ttl=30, key_prefix="agents:list")
 async def list_agents(
     status: Optional[str] = Query(None, description="过滤状态: online/offline"),
     health_status: Optional[str] = Query(None, description="过滤健康状态: healthy/warning/critical"),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
-    列出所有 Agent
+    列出所有 Agent（带 30 秒缓存）
     """
     try:
         query = select(Agent).order_by(Agent.created_at.desc())
@@ -176,12 +186,13 @@ async def list_agents(
 
 
 @router.get("/agents/{agent_id}")
+@with_cache(ttl=30, key_prefix="agents:detail")
 async def get_agent(
     agent_id: str,
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
-    获取单个 Agent 详情
+    获取单个 Agent 详情（带 30 秒缓存）
     """
     try:
         result = await session.execute(select(Agent).where(Agent.id == agent_id))
@@ -253,6 +264,10 @@ async def delete_agent(
 
         logger.warning(f"Agent deleted: {agent_id}")
 
+        # 清除相关缓存
+        await invalidate_cache_pattern("agents:")
+        await invalidate_cache_pattern("cluster:")
+
         return {
             "success": True,
             "data": {"agent_id": agent_id},
@@ -305,6 +320,11 @@ async def agent_heartbeat(
 
         logger.debug(f"Heartbeat received from {agent_id}")
 
+        # 清除相关缓存（heartbeat 频繁，只清除必要的缓存）
+        await invalidate_cache_pattern(f"agents:detail:{agent_id}")
+        await invalidate_cache_pattern("agents:list")
+        await invalidate_cache_pattern("cluster:overview")
+
         return {
             "success": True,
             "data": {
@@ -326,11 +346,12 @@ async def agent_heartbeat(
 
 
 @router.get("/cluster/overview")
+@with_cache(ttl=30, key_prefix="cluster:overview")
 async def cluster_overview(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
-    集群全局概览
+    集群全局概览（带 30 秒缓存）
     """
     try:
         # 统计 Agent 数量
@@ -393,11 +414,12 @@ async def cluster_overview(
 
 
 @router.get("/cluster/topology")
+@with_cache(ttl=60, key_prefix="cluster:topology")
 async def cluster_topology(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
-    获取集群拓扑结构
+    获取集群拓扑结构（带 60 秒缓存）
 
     返回所有节点的层级关系，构建完整的集群拓扑树。
     层级定义：

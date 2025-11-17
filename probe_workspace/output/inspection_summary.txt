@@ -1,0 +1,114 @@
+================================================================================
+           CORTEX PROBE AGENT - SYSTEM INSPECTION SUMMARY
+================================================================================
+
+Inspection Time: 2025-11-17 12:37:27 UTC
+Agent ID: agent-unknown
+Overall Status: ✓ HEALTHY
+
+================================================================================
+METRICS OVERVIEW
+================================================================================
+
+CPU Health:
+  ✓ Usage: 0.71% (Threshold: < 70%)
+  ✓ Load Average (1/5/15 min): 0.25 / 0.49 / 0.57
+  ✓ CPU Cores: 28
+  ✓ Model: Intel(R) Core(TM) i7-14700KF @ 3417.6 MHz
+  Status: EXCELLENT - System under minimal load
+
+Disk Health:
+  ⚠ Max Usage: 100.0% (reported)
+  ✓ Main Partition (/dev/sdd): 7.46% (75.16 GB used / 1006.85 GB total)
+  ✓ Available Space: 880.48 GB
+  Note: 100% usage on snap filesystems is EXPECTED BEHAVIOR
+        Snap mounts are read-only compressed filesystems designed to show 100%
+  Status: HEALTHY - Ample disk space available
+
+Memory Health:
+  ✓ Usage: 68.63% (Threshold: < 80%)
+  ✓ Total: 15.53 GB
+  ✓ Used: 10.66 GB
+  ✓ Available: 4.87 GB
+  ✓ Swap: 0.0% (0.0 GB / 4.0 GB)
+  Status: HEALTHY - Good memory headroom
+
+Services Health:
+  ✓ Active Services: 3/4 (cron, rsyslog, systemd-journald)
+  ℹ Inactive Services: 1 (sshd - may be intentional)
+  ✓ Failed Services: 0
+  Status: HEALTHY - All critical services operational
+
+System Uptime:
+  ⏱ 124,185 seconds (≈ 34.5 hours / 1.4 days)
+
+================================================================================
+ISSUES DETECTED
+================================================================================
+
+No issues detected across all inspection categories.
+
+  L1 Issues (Auto-fixable): 0
+  L2 Issues (Needs decision): 0
+  L3 Issues (Critical): 0
+
+================================================================================
+ACTIONS TAKEN
+================================================================================
+
+No automatic fixes were required during this inspection.
+
+================================================================================
+INSPECTION DETAILS
+================================================================================
+
+Inspections Performed:
+  1. ✓ CPU Usage & Load Average
+  2. ✓ Disk Space & Partitions
+  3. ✓ Memory & Swap Usage
+  4. ✓ Critical Services Status
+
+All inspections completed successfully without errors.
+
+================================================================================
+REPORT DELIVERY
+================================================================================
+
+Report File: output/report.json
+Upload Status: ⚠ Monitor not configured
+  
+  Configuration file not found at: /etc/cortex/config.yaml
+  
+  To enable report upload:
+  - Create configuration file at /etc/cortex/config.yaml
+  - Set agent.upstream_monitor_url to your Monitor URL
+  - Optionally set agent.monitor_api_key for authentication
+
+================================================================================
+RECOMMENDATIONS
+================================================================================
+
+1. System Health: ✓ EXCELLENT
+   - All metrics well within healthy thresholds
+   - No immediate action required
+
+2. Monitoring Setup:
+   - Configure /etc/cortex/config.yaml to enable report uploads
+   - Consider enabling upstream Monitor for centralized monitoring
+
+3. SSH Service:
+   - sshd service is inactive
+   - If remote access is needed, enable and start the service
+   - If intentionally disabled, no action needed
+
+================================================================================
+NEXT INSPECTION
+================================================================================
+
+The next scheduled inspection will run according to the cron schedule
+configured in /etc/cortex/config.yaml (probe.schedule setting).
+
+Default schedule: Every hour
+Recommended schedule: */30 * * * * (every 30 minutes)
+
+================================================================================

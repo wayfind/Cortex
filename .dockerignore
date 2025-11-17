@@ -1,0 +1,104 @@
+# ==================== Cortex Docker Ignore ====================
+# Files and directories to exclude from Docker build context
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Frontend (built separately)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/build/
+
+# Testing
+tests/
+test_*.py
+*_test.py
+.pytest_cache/
+.coverage
+
+# Logs and data (should use volumes)
+logs/
+*.log
+data/
+*.db
+*.db-shm
+*.db-wal
+cortex.db
+cortex_intents.db
+cortex_test.db
+cortex_intents_test.db
+
+# Config files (should be mounted or use env vars)
+config.yaml
+.env
+.env.local
+.env.*.local
+
+# Deployment
+deployment/
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Scripts
+scripts/
+
+# Probe workspace (should use volume)
+probe_workspace/output/
+
+# Intent Engine (MCP specific)
+.intent-engine/
+.serena/
+
+# Other
+.pre-commit-config.yaml
+.editorconfig
+Makefile
+*.tar.gz
+*.zip

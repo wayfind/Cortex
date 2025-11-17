@@ -1,0 +1,25 @@
+[Unit]
+Description=Cortex Monitor Service
+Documentation=https://github.com/cortex-ops/cortex
+After=network.target
+
+[Service]
+Type=simple
+User=cortex
+Group=cortex
+WorkingDirectory=/opt/cortex
+Environment="CORTEX_CONFIG=/etc/cortex/config.yaml"
+ExecStart=/opt/cortex/venv/bin/cortex-monitor --config /etc/cortex/config.yaml
+Restart=always
+RestartSec=10
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+
+# 日志
+StandardOutput=append:/var/log/cortex/monitor.log
+StandardError=append:/var/log/cortex/monitor-error.log
+
+[Install]
+WantedBy=multi-user.target

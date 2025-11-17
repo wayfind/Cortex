@@ -1,0 +1,293 @@
+# ==================== Cortex Multi-Probe Docker Compose ====================
+# 多 Probe 部署示例：每个 Probe 使用不同的巡检方案
+#
+# 使用方法：
+#   docker-compose -f docker-compose.multi-probe.yml up -d
+
+version: '3.8'
+
+services:
+  # ==================== Monitor Service ====================
+  cortex-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cortex-monitor:latest
+    container_name: cortex-monitor
+    restart: unless-stopped
+    command: monitor
+
+    ports:
+      - "${CORTEX_MONITOR_PORT:-8000}:8000"
+
+    environment:
+      - CORTEX_AGENT_ID=${CORTEX_AGENT_ID:-monitor-001}
+      - CORTEX_AGENT_NAME=${CORTEX_AGENT_NAME:-Cortex Monitor}
+      - CORTEX_AGENT_MODE=standalone
+      - CORTEX_MONITOR_HOST=0.0.0.0
+      - CORTEX_MONITOR_PORT=8000
+      - CORTEX_MONITOR_DATABASE_URL=sqlite:////app/data/cortex.db
+      - CORTEX_MONITOR_REGISTRATION_TOKEN=${CORTEX_MONITOR_REGISTRATION_TOKEN}
+      - CORTEX_AUTH_SECRET_KEY=${CORTEX_AUTH_SECRET_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4}
+      - CORTEX_LOG_LEVEL=${CORTEX_LOG_LEVEL:-INFO}
+      - CORTEX_LOG_FORMAT=${CORTEX_LOG_FORMAT:-standard}
+
+    volumes:
+      - cortex-data:/app/data
+      - cortex-logs:/app/logs
+
+    networks:
+      - cortex-network
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Probe 1: Web 服务监控 ====================
+  cortex-probe-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cortex-probe:latest
+    container_name: cortex-probe-web
+    restart: unless-stopped
+    command: probe
+
+    ports:
+      - "8011:8001"  # 使用不同端口避免冲突
+
+    environment:
+      # Agent 身份
+      - CORTEX_AGENT_ID=probe-web-001
+      - CORTEX_AGENT_NAME=Web Services Probe
+      - CORTEX_AGENT_MODE=cluster
+      - CORTEX_AGENT_UPSTREAM_MONITOR_URL=http://cortex-monitor:8000
+
+      # Probe 配置 - 每小时巡检一次
+      - CORTEX_PROBE_HOST=0.0.0.0
+      - CORTEX_PROBE_PORT=8001
+      - CORTEX_PROBE_SCHEDULE=0 * * * *
+      - CORTEX_PROBE_TIMEOUT_SECONDS=300
+      - CORTEX_PROBE_WORKSPACE=/app/probe_workspace
+
+      # Monitor 配置
+      - CORTEX_MONITOR_REGISTRATION_TOKEN=${CORTEX_MONITOR_REGISTRATION_TOKEN}
+
+      # Claude API
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+
+      # 专门的阈值设置（Web 服务器相对宽松）
+      - CORTEX_PROBE_THRESHOLD_CPU_PERCENT=85.0
+      - CORTEX_PROBE_THRESHOLD_MEMORY_PERCENT=90.0
+      - CORTEX_PROBE_THRESHOLD_DISK_PERCENT=85.0
+
+      # 日志
+      - CORTEX_LOG_LEVEL=INFO
+      - CORTEX_LOG_FILE=/app/logs/probe-web.log
+
+    volumes:
+      # 使用专门的 workspace 目录（包含 Web 服务巡检规则）
+      - ./probe_workspaces/web:/app/probe_workspace
+      - cortex-logs:/app/logs
+
+    networks:
+      - cortex-network
+
+    depends_on:
+      - cortex-monitor
+
+  # ==================== Probe 2: 数据库监控 ====================
+  cortex-probe-database:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cortex-probe:latest
+    container_name: cortex-probe-database
+    restart: unless-stopped
+    command: probe
+
+    ports:
+      - "8012:8001"
+
+    environment:
+      # Agent 身份
+      - CORTEX_AGENT_ID=probe-db-001
+      - CORTEX_AGENT_NAME=Database Probe
+      - CORTEX_AGENT_MODE=cluster
+      - CORTEX_AGENT_UPSTREAM_MONITOR_URL=http://cortex-monitor:8000
+
+      # Probe 配置 - 每 30 分钟巡检一次（数据库更频繁）
+      - CORTEX_PROBE_HOST=0.0.0.0
+      - CORTEX_PROBE_PORT=8001
+      - CORTEX_PROBE_SCHEDULE=*/30 * * * *
+      - CORTEX_PROBE_TIMEOUT_SECONDS=600  # 数据库巡检可能需要更长时间
+      - CORTEX_PROBE_WORKSPACE=/app/probe_workspace
+
+      # Monitor 配置
+      - CORTEX_MONITOR_REGISTRATION_TOKEN=${CORTEX_MONITOR_REGISTRATION_TOKEN}
+
+      # Claude API
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+
+      # 严格的阈值设置（数据库对资源更敏感）
+      - CORTEX_PROBE_THRESHOLD_CPU_PERCENT=70.0
+      - CORTEX_PROBE_THRESHOLD_MEMORY_PERCENT=80.0
+      - CORTEX_PROBE_THRESHOLD_DISK_PERCENT=80.0
+
+      # 日志
+      - CORTEX_LOG_LEVEL=DEBUG  # 数据库问题需要更详细日志
+      - CORTEX_LOG_FILE=/app/logs/probe-database.log
+
+    volumes:
+      # 使用专门的 workspace 目录（包含数据库巡检规则）
+      - ./probe_workspaces/database:/app/probe_workspace
+      - cortex-logs:/app/logs
+
+    networks:
+      - cortex-network
+
+    depends_on:
+      - cortex-monitor
+
+  # ==================== Probe 3: K8s 集群监控 ====================
+  cortex-probe-kubernetes:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cortex-probe:latest
+    container_name: cortex-probe-k8s
+    restart: unless-stopped
+    command: probe
+
+    ports:
+      - "8013:8001"
+
+    environment:
+      # Agent 身份
+      - CORTEX_AGENT_ID=probe-k8s-001
+      - CORTEX_AGENT_NAME=Kubernetes Probe
+      - CORTEX_AGENT_MODE=cluster
+      - CORTEX_AGENT_UPSTREAM_MONITOR_URL=http://cortex-monitor:8000
+
+      # Probe 配置 - 每 15 分钟巡检一次（K8s 变化快）
+      - CORTEX_PROBE_HOST=0.0.0.0
+      - CORTEX_PROBE_PORT=8001
+      - CORTEX_PROBE_SCHEDULE=*/15 * * * *
+      - CORTEX_PROBE_TIMEOUT_SECONDS=900  # K8s 巡检可能很复杂
+      - CORTEX_PROBE_WORKSPACE=/app/probe_workspace
+
+      # Monitor 配置
+      - CORTEX_MONITOR_REGISTRATION_TOKEN=${CORTEX_MONITOR_REGISTRATION_TOKEN}
+
+      # Claude API
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+
+      # K8s 特定阈值
+      - CORTEX_PROBE_THRESHOLD_CPU_PERCENT=75.0
+      - CORTEX_PROBE_THRESHOLD_MEMORY_PERCENT=85.0
+      - CORTEX_PROBE_THRESHOLD_DISK_PERCENT=90.0
+
+      # 日志
+      - CORTEX_LOG_LEVEL=INFO
+      - CORTEX_LOG_FILE=/app/logs/probe-k8s.log
+
+    volumes:
+      # 使用专门的 workspace 目录（包含 K8s 巡检规则）
+      - ./probe_workspaces/kubernetes:/app/probe_workspace
+      - cortex-logs:/app/logs
+      # 挂载 kubeconfig（如需访问 K8s 集群）
+      - ~/.kube/config:/home/cortex/.kube/config:ro
+
+    networks:
+      - cortex-network
+
+    depends_on:
+      - cortex-monitor
+
+  # ==================== Probe 4: 安全审计 ====================
+  cortex-probe-security:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cortex-probe:latest
+    container_name: cortex-probe-security
+    restart: unless-stopped
+    command: probe
+
+    ports:
+      - "8014:8001"
+
+    environment:
+      # Agent 身份
+      - CORTEX_AGENT_ID=probe-security-001
+      - CORTEX_AGENT_NAME=Security Audit Probe
+      - CORTEX_AGENT_MODE=cluster
+      - CORTEX_AGENT_UPSTREAM_MONITOR_URL=http://cortex-monitor:8000
+
+      # Probe 配置 - 每天凌晨 2 点执行一次（安全审计不需要太频繁）
+      - CORTEX_PROBE_HOST=0.0.0.0
+      - CORTEX_PROBE_PORT=8001
+      - CORTEX_PROBE_SCHEDULE=0 2 * * *
+      - CORTEX_PROBE_TIMEOUT_SECONDS=1800  # 安全审计可能需要很长时间
+      - CORTEX_PROBE_WORKSPACE=/app/probe_workspace
+
+      # Monitor 配置
+      - CORTEX_MONITOR_REGISTRATION_TOKEN=${CORTEX_MONITOR_REGISTRATION_TOKEN}
+
+      # Claude API
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+
+      # 安全审计的阈值相对宽松（关注安全问题而非性能）
+      - CORTEX_PROBE_THRESHOLD_CPU_PERCENT=90.0
+      - CORTEX_PROBE_THRESHOLD_MEMORY_PERCENT=90.0
+      - CORTEX_PROBE_THRESHOLD_DISK_PERCENT=95.0
+
+      # 日志
+      - CORTEX_LOG_LEVEL=INFO
+      - CORTEX_LOG_FILE=/app/logs/probe-security.log
+
+    volumes:
+      # 使用专门的 workspace 目录（包含安全审计规则）
+      - ./probe_workspaces/security:/app/probe_workspace
+      - cortex-logs:/app/logs
+
+    networks:
+      - cortex-network
+
+    depends_on:
+      - cortex-monitor
+
+  # ==================== Frontend Service ====================
+  cortex-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: cortex-frontend:latest
+    container_name: cortex-frontend
+    restart: unless-stopped
+
+    ports:
+      - "${CORTEX_FRONTEND_PORT:-3000}:80"
+
+    networks:
+      - cortex-network
+
+    depends_on:
+      - cortex-monitor
+
+# ==================== Networks ====================
+networks:
+  cortex-network:
+    driver: bridge
+    name: cortex-network
+
+# ==================== Volumes ====================
+volumes:
+  cortex-data:
+    name: cortex-data
+  cortex-logs:
+    name: cortex-logs

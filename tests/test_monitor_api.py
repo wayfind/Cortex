@@ -6,7 +6,7 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 
 from cortex.common.models import ProbeReport, SystemMetrics
 from cortex.monitor.database import Agent, Alert, Decision
@@ -17,7 +17,7 @@ async def test_health_check():
     """测试健康检查端点"""
     from cortex.monitor.app import app
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/health")
 
     assert response.status_code == 200
@@ -29,7 +29,8 @@ async def test_health_check():
 @pytest.mark.asyncio
 async def test_receive_report_new_agent(test_db_session):
     """测试接收来自新 Agent 的报告"""
-    from cortex.monitor.app import app, get_db_manager
+    from cortex.monitor.app import app
+    from cortex.monitor.dependencies import get_db_manager
 
     # Mock 数据库会话
     async def override_get_session():
@@ -46,20 +47,21 @@ async def test_receive_report_new_agent(test_db_session):
             "cpu_percent": 25.5,
             "memory_percent": 45.2,
             "disk_percent": 60.0,
-            "network_bytes_sent": 1024000,
-            "network_bytes_recv": 2048000,
+            "load_average": [1.0, 1.2, 1.5],
+            "uptime_seconds": 3600,
         },
         "issues": [],
         "actions_taken": [],
         "metadata": {"version": "1.0.0"},
     }
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post("/api/v1/reports", json=report_data)
 
     assert response.status_code == 200
     data = response.json()
-    assert data["message"] == "Report received successfully"
+    assert data["success"] is True
+    assert "report_id" in data["data"]
 
     # 清理
     app.dependency_overrides.clear()
@@ -68,7 +70,8 @@ async def test_receive_report_new_agent(test_db_session):
 @pytest.mark.asyncio
 async def test_receive_heartbeat(test_db_session):
     """测试心跳端点"""
-    from cortex.monitor.app import app, get_db_manager
+    from cortex.monitor.app import app
+    from cortex.monitor.routers.reports import get_session
 
     # 预先创建 Agent
     agent = Agent(
@@ -84,18 +87,17 @@ async def test_receive_heartbeat(test_db_session):
     async def override_get_session():
         yield test_db_session
 
-    app.dependency_overrides[lambda: get_db_manager().get_session()] = override_get_session
+    # 注入测试数据库会话
+    app.dependency_overrides[get_session] = override_get_session
 
-    heartbeat_data = {
-        "agent_id": "test-agent-heartbeat",
-        "timestamp": datetime.utcnow().isoformat(),
-        "status": "healthy",
-    }
-
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        response = await client.post("/api/v1/heartbeat", json=heartbeat_data)
+    # 心跳端点只需要 agent_id 作为查询参数
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/v1/heartbeat", params={"agent_id": "test-agent-heartbeat"})
 
     assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "received_at" in data["data"]
 
     # 验证 Agent 状态已更新
     await test_db_session.refresh(agent)
@@ -109,7 +111,8 @@ async def test_receive_heartbeat(test_db_session):
 @pytest.mark.asyncio
 async def test_get_agents_list(test_db_session):
     """测试获取 Agent 列表"""
-    from cortex.monitor.app import app, get_db_manager
+    from cortex.monitor.app import app
+    from cortex.monitor.dependencies import get_db_manager
 
     # 创建测试 Agents
     agents = [
@@ -126,13 +129,14 @@ async def test_get_agents_list(test_db_session):
 
     app.dependency_overrides[lambda: get_db_manager().get_session()] = override_get_session
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/v1/agents")
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 2
-    assert data[0]["id"] == "agent-001"
+    assert data["success"] is True
+    assert data["data"]["count"] == 2
+    assert data["data"]["agents"][0]["id"] == "agent-001"
 
     # 清理
     app.dependency_overrides.clear()
@@ -141,7 +145,8 @@ async def test_get_agents_list(test_db_session):
 @pytest.mark.asyncio
 async def test_get_decisions_list(test_db_session):
     """测试获取决策列表"""
-    from cortex.monitor.app import app, get_db_manager
+    from cortex.monitor.app import app
+    from cortex.monitor.dependencies import get_db_manager
 
     # 创建测试决策
     decisions = [
@@ -170,12 +175,13 @@ async def test_get_decisions_list(test_db_session):
 
     app.dependency_overrides[lambda: get_db_manager().get_session()] = override_get_session
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/v1/decisions")
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 2
+    assert data["success"] is True
+    assert len(data["data"]["decisions"]) == 2
 
     # 清理
     app.dependency_overrides.clear()
@@ -184,22 +190,25 @@ async def test_get_decisions_list(test_db_session):
 @pytest.mark.asyncio
 async def test_get_alerts_list(test_db_session):
     """测试获取告警列表"""
-    from cortex.monitor.app import app, get_db_manager
+    from cortex.monitor.app import app
+    from cortex.monitor.dependencies import get_db_manager
 
     # 创建测试告警
     alerts = [
         Alert(
             agent_id="agent-001",
+            level="L3",
             type="service_down",
             severity="critical",
-            message="Service is down",
+            description="Service is down",
             status="new",
         ),
         Alert(
             agent_id="agent-002",
+            level="L3",
             type="disk_full",
             severity="warning",
-            message="Disk almost full",
+            description="Disk almost full",
             status="acknowledged",
         ),
     ]
@@ -213,13 +222,17 @@ async def test_get_alerts_list(test_db_session):
 
     app.dependency_overrides[lambda: get_db_manager().get_session()] = override_get_session
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/v1/alerts")
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 2
-    assert data[0]["severity"] == "critical"
+    assert data["success"] is True
+    assert len(data["data"]["alerts"]) == 2
+    # 验证包含所有 severity 级别
+    severities = [alert["severity"] for alert in data["data"]["alerts"]]
+    assert "critical" in severities
+    assert "warning" in severities
 
     # 清理
     app.dependency_overrides.clear()
@@ -228,14 +241,16 @@ async def test_get_alerts_list(test_db_session):
 @pytest.mark.asyncio
 async def test_acknowledge_alert(test_db_session):
     """测试确认告警"""
-    from cortex.monitor.app import app, get_db_manager
+    from cortex.monitor.app import app
+    from cortex.monitor.dependencies import get_db_manager
 
     # 创建测试告警
     alert = Alert(
         agent_id="agent-001",
+        level="L3",
         type="test_alert",
         severity="warning",
-        message="Test alert",
+        description="Test alert",
         status="new",
     )
     test_db_session.add(alert)
@@ -248,10 +263,18 @@ async def test_acknowledge_alert(test_db_session):
 
     app.dependency_overrides[lambda: get_db_manager().get_session()] = override_get_session
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        response = await client.post(f"/api/v1/alerts/{alert_id}/acknowledge")
+    # 准备确认数据
+    ack_data = {
+        "acknowledged_by": "test-user",
+        "notes": "Test acknowledgement"
+    }
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(f"/api/v1/alerts/{alert_id}/acknowledge", json=ack_data)
 
     assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
 
     # 验证状态已更新
     await test_db_session.refresh(alert)
@@ -264,7 +287,8 @@ async def test_acknowledge_alert(test_db_session):
 @pytest.mark.asyncio
 async def test_cluster_overview(test_db_session):
     """测试集群概览"""
-    from cortex.monitor.app import app, get_db_manager
+    from cortex.monitor.app import app
+    from cortex.monitor.dependencies import get_db_manager
 
     # 创建测试数据
     agents = [
@@ -282,14 +306,15 @@ async def test_cluster_overview(test_db_session):
 
     app.dependency_overrides[lambda: get_db_manager().get_session()] = override_get_session
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/v1/cluster/overview")
 
     assert response.status_code == 200
     data = response.json()
-    assert data["total_agents"] == 3
-    assert data["online_agents"] == 2
-    assert data["offline_agents"] == 1
+    assert data["success"] is True
+    assert data["data"]["agents"]["total"] == 3
+    assert data["data"]["agents"]["online"] == 2
+    assert data["data"]["agents"]["offline"] == 1
 
     # 清理
     app.dependency_overrides.clear()

@@ -1,0 +1,44 @@
+{
+  "status": "ok",
+  "summary": {
+    "total": 4,
+    "active": 3,
+    "inactive": 1,
+    "unknown": 0
+  },
+  "services": [
+    {
+      "name": "sshd",
+      "manager": "systemd",
+      "active": false,
+      "enabled": false,
+      "status": "inactive",
+      "enabled_status": ""
+    },
+    {
+      "name": "cron",
+      "manager": "systemd",
+      "active": true,
+      "enabled": true,
+      "status": "active",
+      "enabled_status": "enabled"
+    },
+    {
+      "name": "rsyslog",
+      "manager": "systemd",
+      "active": true,
+      "enabled": true,
+      "status": "active",
+      "enabled_status": "enabled"
+    },
+    {
+      "name": "systemd-journald",
+      "manager": "systemd",
+      "active": true,
+      "enabled": false,
+      "status": "active",
+      "enabled_status": "static"
+    }
+  ],
+  "failed_services": []
+}

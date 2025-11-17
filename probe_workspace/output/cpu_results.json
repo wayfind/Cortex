@@ -1,0 +1,10 @@
+{
+  "status": "ok",
+  "cpu_percent": 0.54,
+  "load_average": {
+    "1min": 0.43,
+    "5min": 0.48,
+    "15min": 0.39
+  },
+  "cpu_cores": 28
+}

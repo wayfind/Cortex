@@ -1,0 +1,187 @@
+{
+  "status": "ok",
+  "max_usage_percent": 100.0,
+  "partitions": [
+    {
+      "device": "none",
+      "mount_point": "/usr/lib/modules/6.6.87.2-microsoft-standard-WSL2",
+      "filesystem": "overlay",
+      "total_gb": 7.77,
+      "used_gb": 0.0,
+      "free_gb": 7.77,
+      "percent": 0.0
+    },
+    {
+      "device": "drivers",
+      "mount_point": "/usr/lib/wsl/drivers",
+      "filesystem": "9p",
+      "total_gb": 299.61,
+      "used_gb": 199.36,
+      "free_gb": 100.26,
+      "percent": 66.54
+    },
+    {
+      "device": "/dev/sdd",
+      "mount_point": "/",
+      "filesystem": "ext4",
+      "total_gb": 1006.85,
+      "used_gb": 75.13,
+      "free_gb": 880.51,
+      "percent": 7.46
+    },
+    {
+      "device": "/dev/sdd",
+      "mount_point": "/mnt/wslg/distro",
+      "filesystem": "ext4",
+      "total_gb": 1006.85,
+      "used_gb": 75.13,
+      "free_gb": 880.51,
+      "percent": 7.46
+    },
+    {
+      "device": "none",
+      "mount_point": "/usr/lib/wsl/lib",
+      "filesystem": "overlay",
+      "total_gb": 7.77,
+      "used_gb": 0.0,
+      "free_gb": 7.77,
+      "percent": 0.0
+    },
+    {
+      "device": "rootfs",
+      "mount_point": "/init",
+      "filesystem": "rootfs",
+      "total_gb": 7.76,
+      "used_gb": 0.0,
+      "free_gb": 7.76,
+      "percent": 0.03
+    },
+    {
+      "device": "none",
+      "mount_point": "/mnt/wslg/versions.txt",
+      "filesystem": "overlay",
+      "total_gb": 7.77,
+      "used_gb": 0.0,
+      "free_gb": 7.77,
+      "percent": 0.01
+    },
+    {
+      "device": "none",
+      "mount_point": "/mnt/wslg/doc",
+      "filesystem": "overlay",
+      "total_gb": 7.77,
+      "used_gb": 0.0,
+      "free_gb": 7.77,
+      "percent": 0.01
+    },
+    {
+      "device": "C:\\134",
+      "mount_point": "/mnt/c",
+      "filesystem": "9p",
+      "total_gb": 299.61,
+      "used_gb": 199.36,
+      "free_gb": 100.26,
+      "percent": 66.54
+    },
+    {
+      "device": "D:\\134",
+      "mount_point": "/mnt/d",
+      "filesystem": "9p",
+      "total_gb": 1562.5,
+      "used_gb": 674.59,
+      "free_gb": 887.91,
+      "percent": 43.17
+    },
+    {
+      "device": "/dev/sdd",
+      "mount_point": "/snap",
+      "filesystem": "ext4",
+      "total_gb": 1006.85,
+      "used_gb": 75.13,
+      "free_gb": 880.51,
+      "percent": 7.46
+    },
+    {
+      "device": "snapfuse",
+      "mount_point": "/snap/bare/5",
+      "filesystem": "fuse.snapfuse",
+      "total_gb": 0.0,
+      "used_gb": 0.0,
+      "free_gb": 0.0,
+      "percent": 100.0
+    },
+    {
+      "device": "snapfuse",
+      "mount_point": "/snap/core22/2133",
+      "filesystem": "fuse.snapfuse",
+      "total_gb": 0.07,
+      "used_gb": 0.07,
+      "free_gb": 0.0,
+      "percent": 100.0
+    },
+    {
+      "device": "snapfuse",
+      "mount_point": "/snap/core22/2139",
+      "filesystem": "fuse.snapfuse",
+      "total_gb": 0.07,
+      "used_gb": 0.07,
+      "free_gb": 0.0,
+      "percent": 100.0
+    },
+    {
+      "device": "snapfuse",
+      "mount_point": "/snap/gtk-common-themes/1535",
+      "filesystem": "fuse.snapfuse",
+      "total_gb": 0.09,
+      "used_gb": 0.09,
+      "free_gb": 0.0,
+      "percent": 100.0
+    },
+    {
+      "device": "snapfuse",
+      "mount_point": "/snap/snapd/25202",
+      "filesystem": "fuse.snapfuse",
+      "total_gb": 0.05,
+      "used_gb": 0.05,
+      "free_gb": 0.0,
+      "percent": 100.0
+    },
+    {
+      "device": "snapfuse",
+      "mount_point": "/snap/snapd/25577",
+      "filesystem": "fuse.snapfuse",
+      "total_gb": 0.05,
+      "used_gb": 0.05,
+      "free_gb": 0.0,
+      "percent": 100.0
+    },
+    {
+      "device": "snapfuse",
+      "mount_point": "/snap/ubuntu-desktop-installer/1276",
+      "filesystem": "fuse.snapfuse",
+      "total_gb": 0.13,
+      "used_gb": 0.13,
+      "free_gb": 0.0,
+      "percent": 100.0
+    },
+    {
+      "device": "snapfuse",
+      "mount_point": "/snap/ubuntu-desktop-installer/1286",
+      "filesystem": "fuse.snapfuse",
+      "total_gb": 0.13,
+      "used_gb": 0.13,
+      "free_gb": 0.0,
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/sdd",
+      "mount_point": "/var/lib/docker",
+      "filesystem": "ext4",
+      "total_gb": 1006.85,
+      "used_gb": 75.13,
+      "free_gb": 880.51,
+      "percent": 7.46
+    }
+  ],
+  "large_directories": []
+}

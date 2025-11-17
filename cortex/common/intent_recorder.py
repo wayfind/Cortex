@@ -311,3 +311,36 @@ class IntentRecorder:
         except Exception as e:
             logger.error(f"Failed to query intents: {e}")
             return []
+
+    async def update_intent_status(self, intent_id: int, status: str) -> bool:
+        """
+        更新意图状态
+
+        Args:
+            intent_id: 意图记录 ID
+            status: 新状态（如 approved, rejected, executed, completed）
+
+        Returns:
+            是否更新成功
+        """
+        if not self.enabled:
+            return False
+
+        try:
+            from sqlalchemy import update
+
+            async with self.async_session_factory() as session:
+                stmt = (
+                    update(IntentRecord)
+                    .where(IntentRecord.id == intent_id)
+                    .values(status=status)
+                )
+                await session.execute(stmt)
+                await session.commit()
+
+                logger.info(f"Intent {intent_id} status updated to: {status}")
+                return True
+
+        except Exception as e:
+            logger.error(f"Failed to update intent status: {e}")
+            return False

@@ -83,7 +83,7 @@ class TestProbeConfig:
         """验证 ProbeConfig 使用扁平字段结构"""
         config = ProbeConfig(
             schedule="*/5 * * * *",
-            timeout=300,
+            timeout_seconds=300,
             check_system_health=True,
             check_service_status=True,
             check_log_analysis=True,
@@ -102,7 +102,7 @@ class TestProbeConfig:
         """验证从 YAML 加载的配置结构"""
         yaml_config = {
             "schedule": "*/5 * * * *",
-            "timeout": 300,
+            "timeout_seconds": 300,
             "check_system_health": True,
             "check_service_status": True,
             "check_log_analysis": True,
@@ -122,7 +122,7 @@ class TestProbeConfig:
         with pytest.raises(Exception):  # Pydantic 会抛出验证错误
             ProbeConfig(
                 schedule="*/5 * * * *",
-                timeout=300,
+                timeout_seconds=300,
                 thresholds={  # 嵌套结构应该被拒绝
                     "cpu_percent": 80.0,
                     "memory_percent": 85.0,

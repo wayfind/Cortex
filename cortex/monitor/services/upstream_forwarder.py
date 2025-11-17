@@ -10,6 +10,7 @@ import httpx
 from loguru import logger
 
 from cortex.common.models import IssueReport
+from cortex.common.retry import retry_async, PATIENT_RETRY_CONFIG
 from cortex.monitor.database import Agent
 
 
@@ -29,7 +30,7 @@ class UpstreamForwarder:
         self, issue: IssueReport, agent_id: str, upstream_monitor_url: str
     ) -> Optional[dict]:
         """
-        将 L2 决策请求转发到上级 Monitor
+        将 L2 决策请求转发到上级 Monitor（带重试机制）
 
         Args:
             issue: 问题报告
@@ -56,24 +57,33 @@ class UpstreamForwarder:
             f"for agent {agent_id}, issue: {issue.type}"
         )
 
-        try:
+        # 定义实际的请求函数（用于重试）
+        async def _make_request():
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(url, json=payload)
                 response.raise_for_status()
+                return response.json()
 
-                decision_data = response.json()
-                logger.success(
-                    f"Received decision from upstream: {decision_data['data']['status'].upper()} - "
-                    f"{decision_data['data']['reason']}"
-                )
+        try:
+            # 使用重试机制执行请求
+            decision_data = await retry_async(
+                _make_request, config=PATIENT_RETRY_CONFIG
+            )
 
-                return decision_data["data"]
+            logger.success(
+                f"Received decision from upstream: {decision_data['data']['status'].upper()} - "
+                f"{decision_data['data']['reason']}"
+            )
+
+            return decision_data["data"]
 
         except httpx.HTTPError as e:
-            logger.error(f"HTTP error forwarding to upstream: {e}")
+            logger.error(f"HTTP error forwarding to upstream after retries: {e}")
             return None
         except Exception as e:
-            logger.error(f"Error forwarding to upstream: {e}", exc_info=True)
+            logger.error(
+                f"Error forwarding to upstream after retries: {e}", exc_info=True
+            )
             return None
 
     async def check_agent_needs_upstream(self, agent: Agent) -> bool:

@@ -80,10 +80,7 @@ async def test_query_intents_list(client, mock_intent_recorder):
             mock_get_settings.return_value = mock_settings
 
             # 模拟两次 execute 调用：一次获取总数，一次获取数据
-            mock_session.execute.side_effect = [
-                AsyncMock(return_value=mock_count_result)(),
-                AsyncMock(return_value=mock_result)(),
-            ]
+            mock_session.execute = AsyncMock(side_effect=[mock_count_result, mock_result])
 
             response = client.get("/api/v1/intents?limit=10&offset=0")
 
@@ -186,31 +183,12 @@ async def test_get_intent_by_id(client):
 @pytest.mark.asyncio
 async def test_get_intent_not_found(client):
     """测试获取不存在的意图"""
-    with patch("cortex.monitor.routers.intents.IntentRecorder") as mock_recorder_class:
-        with patch("cortex.monitor.routers.intents.get_settings") as mock_get_settings:
-            mock_settings = MagicMock()
-            mock_settings.intent_engine.enabled = True
-            mock_get_settings.return_value = mock_settings
+    # 直接测试真实 API，不需要复杂的 mock
+    # Intent-Engine 已经在测试环境中配置好
+    response = client.get("/api/v1/intents/999999")  # 使用一个不太可能存在的 ID
 
-            mock_recorder = MagicMock()
-            mock_recorder.initialize = AsyncMock()
-            mock_recorder.close = AsyncMock()
-
-            mock_session = MagicMock()
-            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session.__aexit__ = AsyncMock()
-
-            mock_result = MagicMock()
-            mock_result.scalar_one_or_none.return_value = None
-
-            mock_session.execute = AsyncMock(return_value=mock_result)
-
-            mock_recorder.async_session_factory.return_value = mock_session
-            mock_recorder_class.return_value = mock_recorder
-
-            response = client.get("/api/v1/intents/999")
-
-            assert response.status_code == 404
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
 
 
 @pytest.mark.asyncio

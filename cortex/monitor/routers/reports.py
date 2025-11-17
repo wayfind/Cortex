@@ -10,9 +10,10 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cortex.common.cache import invalidate_cache_pattern
 from cortex.common.models import ProbeReport
 from cortex.config.settings import get_settings
-from cortex.monitor.dependencies import get_db_manager
+from cortex.monitor.dependencies import get_db_manager, get_ws_manager
 from cortex.monitor.database import Agent, Decision, Report
 from cortex.monitor.services import AlertAggregator, DecisionEngine, TelegramNotifier
 from cortex.monitor.services.upstream_forwarder import UpstreamForwarder
@@ -83,6 +84,21 @@ async def receive_report(
             f"issues: {len(report.issues)}, actions: {len(report.actions_taken)}"
         )
 
+        # 广播报告接收事件
+        try:
+            ws_manager = get_ws_manager()
+            await ws_manager.broadcast_report_received(
+                agent_id=report.agent_id,
+                report_id=db_report.id,
+                summary={
+                    "status": report.status.value,
+                    "issues_count": len(report.issues),
+                    "actions_count": len(report.actions_taken),
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to broadcast report event: {e}")
+
         # 4. 处理 L2 决策请求
         settings = get_settings()
         l2_decisions = []
@@ -138,6 +154,20 @@ async def receive_report(
                     l2_issues, report.agent_id, session
                 )
 
+        # 广播 L2 决策事件
+        if l2_decisions:
+            try:
+                ws_manager = get_ws_manager()
+                for decision in l2_decisions:
+                    await ws_manager.broadcast_decision_made(
+                        decision_id=decision.id,
+                        agent_id=report.agent_id,
+                        status=decision.status,
+                        reason=decision.reason
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to broadcast decision events: {e}")
+
         # 5. 处理 L3 告警
         alert_aggregator = AlertAggregator(settings)
         l3_alerts = []
@@ -151,6 +181,23 @@ async def receive_report(
             if l3_alerts:
                 telegram_notifier = TelegramNotifier(settings)
                 await telegram_notifier.send_batch_alerts(l3_alerts)
+
+            # 广播 L3 告警事件
+            try:
+                ws_manager = get_ws_manager()
+                for alert in l3_alerts:
+                    await ws_manager.broadcast_alert_triggered(
+                        alert_id=alert.id,
+                        agent_id=report.agent_id,
+                        level=alert.level,
+                        alert_type=alert.type,
+                        description=alert.description
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to broadcast alert events: {e}")
+
+        # 清除集群概览缓存（报告影响统计数据）
+        await invalidate_cache_pattern("cluster:overview")
 
         return {
             "success": True,
@@ -180,7 +227,7 @@ async def receive_report(
 @router.post("/heartbeat")
 async def receive_heartbeat(
     agent_id: str,
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     接收心跳数据（轻量级上报）

@@ -7,24 +7,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from cortex.common.models import IssueReport
-from cortex.config.settings import Settings
 from cortex.monitor.database import Decision
 from cortex.monitor.services.decision_engine import DecisionEngine
 
 
 @pytest.fixture
-def mock_settings():
-    """创建 Mock 配置"""
-    settings = MagicMock(spec=Settings)
-    settings.claude.api_key = "test-api-key"
-    settings.claude.model = "claude-3-5-sonnet-20241022"
-    return settings
-
-
-@pytest.fixture
-def decision_engine(mock_settings):
-    """创建 DecisionEngine 实例"""
-    return DecisionEngine(mock_settings)
+def decision_engine(test_settings):
+    """创建 DecisionEngine 实例（使用真实的测试配置）"""
+    return DecisionEngine(test_settings)
 
 
 @pytest.fixture
@@ -139,7 +129,9 @@ async def test_parse_llm_response_invalid_format(decision_engine):
 
     # 格式错误时应该默认拒绝
     assert status == "rejected"
-    assert "parse" in reason.lower() or "format" in reason.lower()
+    # 实现返回中文 reason，analysis 包含原始输出
+    assert reason == "见详细分析" or "无法解析" in reason
+    assert analysis == invalid_response  # 原始输出作为分析
 
 
 @pytest.mark.asyncio

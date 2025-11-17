@@ -23,17 +23,21 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         Cron 定时触发                         │
-│                     (例如：每小时一次)                        │
+│                  Probe Web 服务（FastAPI）                    │
+│                    常驻进程 (cortex-probe)                     │
+│  - REST API (health, status, execute, reports)               │
+│  - WebSocket (实时状态推送)                                   │
+│  - APScheduler (内部调度，无需 cron)                          │
 └────────────────┬────────────────────────────────────────────┘
                  │
+                 │ 周期性触发 (APScheduler)
                  ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    run_probe.sh                              │
-│  1. 检查依赖 (claude, python3)                                │
-│  2. 准备工作目录 (output/)                                     │
-│  3. 构建提示词                                                 │
-│  4. 调用 claude -p                                            │
+│                    Claude Executor                           │
+│  1. 准备工作目录 (output/)                                     │
+│  2. 构建提示词                                                 │
+│  3. 调用 claude -p (异步)                                     │
+│  4. 解析报告                                                   │
 └────────────────┬────────────────────────────────────────────┘
                  │
                  ▼
@@ -175,66 +179,67 @@
 
 ## 详细步骤
 
-### 步骤 1：Cron 触发
+### 步骤 1：Probe Web 服务启动
 
-**配置示例**：
-```bash
-# /etc/crontab 或 crontab -e
-0 * * * * /opt/cortex/probe/run_probe.sh >> /var/log/cortex-probe.log 2>&1
+**systemd 服务配置**：
+```ini
+[Unit]
+Description=Cortex Probe Web Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/cortex/venv/bin/cortex-probe --config /etc/cortex/config.yaml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-**作用**：按计划自动触发巡检（例如每小时）
+**作用**：Probe 作为常驻 Web 服务进程运行，提供 API 和 WebSocket
 
 ---
 
-### 步骤 2：run_probe.sh 启动
+### 步骤 2：APScheduler 内部调度
 
 **核心代码**：
-```bash
-#!/bin/bash
+```python
+# probe/scheduler_service.py
 
-# 检查依赖
-check_dependencies() {
-    command -v claude &> /dev/null || exit 1
-    command -v python3 &> /dev/null || exit 1
-}
+class ProbeSchedulerService:
+    async def start(self):
+        # 配置定时任务
+        schedule_cron = self.settings.probe.schedule  # 从配置读取，如 "0 * * * *"
+        trigger = CronTrigger.from_crontab(schedule_cron)
 
-# 准备工作目录
-prepare_workspace() {
-    mkdir -p "$OUTPUT_DIR"
-    rm -f "${OUTPUT_DIR}"/*.json
-}
+        self.scheduler.add_job(
+            self._scheduled_inspection,  # 周期性执行
+            trigger=trigger,
+            id=self.schedule_job_id
+        )
 
-# 执行巡检
-run_probe() {
-    PROMPT="Execute a full system inspection as a Cortex Probe Agent.
+        self.scheduler.start()
 
-Follow these steps:
-1. Read CLAUDE.md to understand your role and workflow
-2. List all inspection requirements in inspections/*.md
-3. For each inspection:
-   - Run the corresponding tool in tools/
-   - Analyze the results
-   - Determine if there are any issues (L1/L2/L3)
-   - For L1 issues, execute fixes using available tools
-   - Collect all results
-4. Use tools/report_builder.py to generate the final report
-5. Use tools/report_to_monitor.py to upload the report"
+    async def _scheduled_inspection(self):
+        """定时触发的巡检任务"""
+        await self.execute_once(force=False)
 
-    # 调用 Claude
-    claude -p --dangerously-skip-permissions "$PROMPT"
-}
+    async def execute_once(self, force: bool = False):
+        """执行一次巡检（可手动调用 API 触发）"""
+        execution_id = str(uuid.uuid4())
+
+        # 广播开始事件（WebSocket）
+        await self.ws_manager.broadcast_inspection_started(execution_id)
+
+        # 异步执行（不阻塞 Web 服务）
+        asyncio.create_task(self._execute_and_record(execution_id))
 ```
 
 **职责**：
-1. ✅ 环境检查（验证 `claude` 和 `python3`）
-2. 📁 准备工作目录
-3. 📝 构建提示词
-4. 🚀 调用 Claude Code
-
-**关键参数**：
-- `-p`：prompt mode（非交互式）
-- `--dangerously-skip-permissions`：自动批准工具调用（适合 cron）
+1. ✅ 管理定时任务（APScheduler）
+2. 📡 提供 API 接口（手动触发、暂停/恢复）
+3. 🔄 实时状态推送（WebSocket）
+4. 📊 执行历史记录
 
 ---
 

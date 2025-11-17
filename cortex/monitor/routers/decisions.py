@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cortex.config.settings import get_settings
-from cortex.monitor.dependencies import get_db_manager
+from cortex.monitor.dependencies import get_db_manager, get_ws_manager
 from cortex.monitor.database import Agent, Decision
 from cortex.monitor.services.decision_engine import DecisionEngine
 
@@ -83,6 +83,18 @@ async def request_decision(
             f"Decision made for child request: {decision.status.upper()} - {decision.reason}"
         )
 
+        # 广播决策事件
+        try:
+            ws_manager = get_ws_manager()
+            await ws_manager.broadcast_decision_made(
+                decision_id=decision.id,
+                agent_id=decision_request.agent_id,
+                status=decision.status,
+                reason=decision.reason
+            )
+        except Exception as e:
+            logger.warning(f"Failed to broadcast decision event: {e}")
+
         return {
             "success": True,
             "data": {
@@ -107,7 +119,7 @@ async def list_decisions(
     status: Optional[str] = Query(None, description="过滤状态: approved/rejected"),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     查询决策记录
@@ -158,7 +170,7 @@ async def list_decisions(
 @router.get("/decisions/{decision_id}")
 async def get_decision(
     decision_id: int,
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     获取单个决策详情
@@ -200,7 +212,7 @@ async def get_decision(
 async def submit_decision_feedback(
     decision_id: int,
     execution_result: str,
-    session: AsyncSession = Depends(lambda: get_db_manager().get_session()),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """
     Agent 回传决策执行结果

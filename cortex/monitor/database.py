@@ -5,7 +5,7 @@ Monitor 数据库模型定义
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text, func, Index
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -28,7 +28,7 @@ class Agent(Base):
 
     # 状态
     status: Mapped[str] = mapped_column(
-        String(20), default="offline", nullable=False
+        String(20), default="offline", nullable=False, index=True  # 添加索引
     )  # online/offline
     health_status: Mapped[str] = mapped_column(
         String(20), default="unknown", nullable=True
@@ -46,6 +46,11 @@ class Agent(Base):
     # 元数据
     metadata_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
+    # 组合索引：按状态和父节点查询
+    __table_args__ = (
+        Index("ix_agents_status_parent", "status", "parent_id"),
+    )
+
 
 class Report(Base):
     """Probe 上报数据表"""
@@ -56,7 +61,7 @@ class Report(Base):
     agent_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     status: Mapped[str] = mapped_column(
-        String(20), nullable=False
+        String(20), nullable=False, index=True  # 添加索引
     )  # healthy/warning/critical
 
     # JSON 存储的数据
@@ -68,6 +73,12 @@ class Report(Base):
     # 接收时间
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
+    )
+
+    # 组合索引：按 agent 和时间范围查询（常见的分页查询）
+    __table_args__ = (
+        Index("ix_reports_agent_timestamp", "agent_id", "timestamp"),
+        Index("ix_reports_agent_status", "agent_id", "status"),
     )
 
 
@@ -98,6 +109,13 @@ class Decision(Base):
     executed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     execution_result: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    # 组合索引：常见查询模式
+    __table_args__ = (
+        Index("ix_decisions_agent_created", "agent_id", "created_at"),
+        Index("ix_decisions_agent_status", "agent_id", "status"),
+        Index("ix_decisions_status_created", "status", "created_at"),
+    )
+
 
 class Alert(Base):
     """告警记录表"""
@@ -112,7 +130,7 @@ class Alert(Base):
     type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     severity: Mapped[str] = mapped_column(
-        String(20), nullable=False
+        String(20), nullable=False, index=True  # 添加索引
     )  # low/medium/high/critical
 
     # 状态
@@ -133,6 +151,13 @@ class Alert(Base):
 
     # 备注
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # 组合索引：常见查询模式（按状态、级别、时间过滤）
+    __table_args__ = (
+        Index("ix_alerts_agent_status_created", "agent_id", "status", "created_at"),
+        Index("ix_alerts_status_level_severity", "status", "level", "severity"),
+        Index("ix_alerts_agent_level", "agent_id", "level"),
+    )
 
 
 class User(Base):
@@ -156,3 +181,38 @@ class User(Base):
 
     # 激活状态
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class APIKey(Base):
+    """API Key 表（用于 API 认证）"""
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)  # API Key 名称/描述
+    owner_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 关联的 User ID（可选）
+    owner_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # 所有者名称
+
+    # 权限级别（继承 User 的 role 概念）
+    role: Mapped[str] = mapped_column(
+        String(20), default="viewer", nullable=False
+    )  # admin/operator/viewer
+
+    # 状态
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)  # 添加索引
+
+    # 使用统计
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    usage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # 时间戳
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)  # 过期时间（可选）
+
+    # 组合索引：查询有效的 API Key
+    __table_args__ = (
+        Index("ix_api_keys_active_expires", "is_active", "expires_at"),
+    )

@@ -1,0 +1,198 @@
+# ==================== Cortex Docker Compose Configuration ====================
+# Production-ready configuration for Cortex deployment
+#
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose down               # Stop all services
+#   docker-compose logs -f            # View logs
+#   docker-compose ps                 # Check status
+
+version: '3.8'
+
+services:
+  # ==================== Monitor Service ====================
+  cortex-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cortex-monitor:latest
+    container_name: cortex-monitor
+    hostname: cortex-monitor
+    restart: unless-stopped
+
+    command: monitor
+
+    ports:
+      - "${CORTEX_MONITOR_PORT:-8000}:8000"
+
+    environment:
+      # Agent Configuration
+      - CORTEX_AGENT_ID=${CORTEX_AGENT_ID:-monitor-001}
+      - CORTEX_AGENT_NAME=${CORTEX_AGENT_NAME:-Cortex Monitor}
+      - CORTEX_AGENT_MODE=${CORTEX_AGENT_MODE:-standalone}
+
+      # Monitor Configuration
+      - CORTEX_MONITOR_HOST=0.0.0.0
+      - CORTEX_MONITOR_PORT=8000
+      - CORTEX_MONITOR_DATABASE_URL=sqlite:////app/data/cortex.db
+      - CORTEX_MONITOR_REGISTRATION_TOKEN=${CORTEX_MONITOR_REGISTRATION_TOKEN:-change-me-in-production}
+
+      # Authentication
+      - CORTEX_AUTH_SECRET_KEY=${CORTEX_AUTH_SECRET_KEY:-change-this-secret-key-in-production-min-32-chars}
+      - CORTEX_AUTH_ALGORITHM=HS256
+      - CORTEX_AUTH_ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+      # Claude API (required for L2 decisions)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4}
+      - ANTHROPIC_MAX_TOKENS=2000
+      - ANTHROPIC_TIMEOUT=30
+
+      # Telegram (optional)
+      - TELEGRAM_ENABLED=${TELEGRAM_ENABLED:-false}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+
+      # Intent Engine
+      - CORTEX_INTENT_ENABLED=true
+      - CORTEX_INTENT_DATABASE_URL=sqlite:////app/data/cortex_intents.db
+
+      # Logging
+      - CORTEX_LOG_LEVEL=${CORTEX_LOG_LEVEL:-INFO}
+      - CORTEX_LOG_FORMAT=${CORTEX_LOG_FORMAT:-standard}
+      - CORTEX_LOG_FILE=/app/logs/monitor.log
+
+    volumes:
+      # Persistent data
+      - cortex-data:/app/data
+      # Logs
+      - cortex-logs:/app/logs
+      # Configuration (optional - can use env vars instead)
+      - ./config.yaml:/app/config.yaml:ro
+
+    networks:
+      - cortex-network
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ==================== Probe Service ====================
+  cortex-probe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cortex-probe:latest
+    container_name: cortex-probe
+    hostname: cortex-probe
+    restart: unless-stopped
+
+    command: probe
+
+    ports:
+      - "${CORTEX_PROBE_PORT:-8001}:8001"
+
+    environment:
+      # Agent Configuration
+      - CORTEX_AGENT_ID=${CORTEX_AGENT_ID:-probe-001}
+      - CORTEX_AGENT_NAME=${CORTEX_AGENT_NAME:-Cortex Probe}
+      - CORTEX_AGENT_MODE=${CORTEX_AGENT_MODE:-standalone}
+      - CORTEX_AGENT_UPSTREAM_MONITOR_URL=${CORTEX_AGENT_UPSTREAM_MONITOR_URL}
+
+      # Probe Configuration
+      - CORTEX_PROBE_HOST=0.0.0.0
+      - CORTEX_PROBE_PORT=8001
+      - CORTEX_PROBE_SCHEDULE=${CORTEX_PROBE_SCHEDULE:-0 * * * *}
+      - CORTEX_PROBE_TIMEOUT_SECONDS=300
+      - CORTEX_PROBE_WORKSPACE=/app/probe_workspace
+      - CORTEX_PROBE_REPORT_RETENTION_DAYS=30
+
+      # Monitor Configuration (for internal Monitor)
+      - CORTEX_MONITOR_HOST=0.0.0.0
+      - CORTEX_MONITOR_PORT=8000
+      - CORTEX_MONITOR_DATABASE_URL=sqlite:////app/data/cortex.db
+      - CORTEX_MONITOR_REGISTRATION_TOKEN=${CORTEX_MONITOR_REGISTRATION_TOKEN:-change-me-in-production}
+
+      # Claude API (required for inspections)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4}
+
+      # Thresholds
+      - CORTEX_PROBE_THRESHOLD_CPU_PERCENT=80.0
+      - CORTEX_PROBE_THRESHOLD_MEMORY_PERCENT=85.0
+      - CORTEX_PROBE_THRESHOLD_DISK_PERCENT=90.0
+
+      # Logging
+      - CORTEX_LOG_LEVEL=${CORTEX_LOG_LEVEL:-INFO}
+      - CORTEX_LOG_FORMAT=${CORTEX_LOG_FORMAT:-standard}
+      - CORTEX_LOG_FILE=/app/logs/probe.log
+
+    volumes:
+      # Probe workspace
+      - cortex-probe-workspace:/app/probe_workspace
+      # Logs
+      - cortex-logs:/app/logs
+      # Configuration (optional)
+      - ./config.yaml:/app/config.yaml:ro
+
+    networks:
+      - cortex-network
+
+    depends_on:
+      - cortex-monitor
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ==================== Frontend Service ====================
+  cortex-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: cortex-frontend:latest
+    container_name: cortex-frontend
+    hostname: cortex-frontend
+    restart: unless-stopped
+
+    ports:
+      - "${CORTEX_FRONTEND_PORT:-3000}:80"
+
+    networks:
+      - cortex-network
+
+    depends_on:
+      - cortex-monitor
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+# ==================== Networks ====================
+networks:
+  cortex-network:
+    driver: bridge
+    name: cortex-network
+
+# ==================== Volumes ====================
+volumes:
+  # Monitor data (database)
+  cortex-data:
+    name: cortex-data
+
+  # Shared logs
+  cortex-logs:
+    name: cortex-logs
+
+  # Probe workspace
+  cortex-probe-workspace:
+    name: cortex-probe-workspace

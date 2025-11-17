@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cortex.monitor.database import Agent
 from cortex.monitor.db_manager import DatabaseManager
+from cortex.monitor.dependencies import get_ws_manager
 
 
 class HeartbeatChecker:
@@ -48,11 +49,14 @@ class HeartbeatChecker:
 
                 # 检查每个 online Agent 的心跳
                 offline_count = 0
+                offline_agents = []
                 for agent in online_agents:
                     # 如果 last_heartbeat 为 None 或超时，标记为 offline
                     if agent.last_heartbeat is None or agent.last_heartbeat < timeout_threshold:
+                        old_status = agent.status
                         agent.status = "offline"
                         offline_count += 1
+                        offline_agents.append((agent, old_status))
                         logger.warning(
                             f"Agent {agent.id} ({agent.name}) marked as offline - "
                             f"last heartbeat: {agent.last_heartbeat.isoformat() if agent.last_heartbeat else 'never'}"
@@ -61,6 +65,19 @@ class HeartbeatChecker:
                 if offline_count > 0:
                     await session.commit()
                     logger.info(f"Heartbeat check: {offline_count} agents marked as offline")
+
+                    # 广播 Agent 状态变化事件
+                    try:
+                        ws_manager = get_ws_manager()
+                        for agent, old_status in offline_agents:
+                            await ws_manager.broadcast_agent_status_changed(
+                                agent_id=agent.id,
+                                old_status=old_status,
+                                new_status="offline",
+                                health_status=agent.health_status or "unknown"
+                            )
+                    except Exception as e:
+                        logger.warning(f"Failed to broadcast agent status changes: {e}")
                 else:
                     logger.debug("Heartbeat check: all agents are responsive")
 

@@ -1,0 +1,40 @@
+{
+  "agent_id": "test-node-001",
+  "timestamp": "2025-11-16T11:46:00Z",
+  "status": "critical",
+  "metrics": {
+    "cpu_percent": 95.3,
+    "memory_percent": 96.8,
+    "disk_percent": 98.5,
+    "load_average": [8.5, 7.8, 6.5],
+    "uptime_seconds": 864000
+  },
+  "issues": [
+    {
+      "level": "L3",
+      "type": "disk_critical",
+      "description": "Disk usage at 98.5% - CRITICAL",
+      "severity": "critical",
+      "details": {
+        "mount_point": "/",
+        "threshold": 90.0,
+        "current": 98.5
+      }
+    },
+    {
+      "level": "L3",
+      "type": "memory_critical",
+      "description": "Memory exhaustion imminent at 96.8%",
+      "severity": "critical",
+      "details": {
+        "threshold": 90.0,
+        "current": 96.8
+      }
+    }
+  ],
+  "actions_taken": [],
+  "metadata": {
+    "probe_version": "1.0.0-文档驱动",
+    "test": "critical_scenario"
+  }
+}
