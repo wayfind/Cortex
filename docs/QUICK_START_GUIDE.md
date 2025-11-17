@@ -32,7 +32,7 @@
 
 ### 必需软件
 - **Docker 部署**: Docker 20.10+, Docker Compose 2.0+
-- **传统安装**: Python 3.11+, Node.js 20+
+- **传统安装**: Python 3.10+, Node.js 20+
 
 ---
 
@@ -161,58 +161,57 @@ source venv/bin/activate  # Linux/macOS
 pip install -r requirements.txt
 ```
 
-### 步骤 2: 配置文件
+### 步骤 2: 配置环境变量
 
 ```bash
-# 复制配置模板
-cp config.example.yaml config.yaml
+# 快速设置（自动生成安全密钥）
+python scripts/setup_env.py
+
+# 或手动复制
+cp .env.example .env
 
 # 编辑配置
-nano config.yaml
+nano .env
 ```
 
-**config.yaml 示例**:
-```yaml
+**必须配置的环境变量**:
+```bash
+# Agent 配置
+CORTEX_AGENT_ID=probe-001
+CORTEX_AGENT_NAME=My Probe Node
+CORTEX_AGENT_MODE=standalone
+
+# Claude API（必需）
+ANTHROPIC_API_KEY=sk-ant-your-api-key-here
+ANTHROPIC_MODEL=claude-sonnet-4
+
 # Monitor 配置
-monitor:
-  host: "0.0.0.0"
-  port: 8000
-  api_prefix: "/api/v1"
+CORTEX_MONITOR_HOST=0.0.0.0
+CORTEX_MONITOR_PORT=8000
+CORTEX_MONITOR_DATABASE_URL=sqlite:///./cortex.db
 
 # Probe 配置
-probe:
-  agent_id: "probe-001"
-  monitor_url: null  # 独立模式设为 null
-  workspace_dir: "./probe_workspace"
-  schedule_cron: "0 */6 * * *"  # 每6小时执行一次
+CORTEX_PROBE_HOST=0.0.0.0
+CORTEX_PROBE_PORT=8001
+CORTEX_PROBE_SCHEDULE=0 */6 * * *
+CORTEX_PROBE_WORKSPACE=./probe_workspace
 
-  # 阈值配置
-  threshold_cpu_percent: 80.0
-  threshold_memory_percent: 85.0
-  threshold_disk_percent: 90.0
-
-# Claude API
-claude:
-  api_key: "sk-ant-your-api-key-here"
-  model: "claude-sonnet-4"
-  temperature: 1.0
-  max_tokens: 2000
-
-# 数据库
-database:
-  url: "sqlite:///./cortex.db"
+# 阈值配置
+CORTEX_PROBE_THRESHOLD_CPU_PERCENT=80.0
+CORTEX_PROBE_THRESHOLD_MEMORY_PERCENT=85.0
+CORTEX_PROBE_THRESHOLD_DISK_PERCENT=90.0
 
 # Intent Engine
-intent_engine:
-  enabled: true
-  database_url: "sqlite:///./cortex_intents.db"
+CORTEX_INTENT_ENABLED=true
+CORTEX_INTENT_DATABASE_URL=sqlite:///./cortex_intents.db
 
 # Telegram 通知（可选）
-telegram:
-  enabled: false
-  bot_token: ""
-  chat_id: ""
+TELEGRAM_ENABLED=false
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
 ```
+
+> **提示**: 完整的配置选项请查看 `.env.example` 文件。
 
 ### 步骤 3: 安装前端依赖
 
@@ -351,11 +350,13 @@ curl http://localhost:8000/api/v1/alerts
 
 **在子节点上配置 Probe**:
 
-编辑 `config.yaml`:
-```yaml
-probe:
-  agent_id: "probe-child-001"
-  monitor_url: "http://parent-monitor-ip:8000"  # 父节点 Monitor 地址
+编辑 `.env`:
+```bash
+# Agent 配置
+CORTEX_AGENT_ID=probe-child-001
+CORTEX_AGENT_NAME=Child Probe Node
+CORTEX_AGENT_MODE=cluster
+CORTEX_AGENT_UPSTREAM_MONITOR_URL=http://parent-monitor-ip:8000
 ```
 
 **子节点启动后会自动**:
@@ -370,15 +371,22 @@ curl http://localhost:8000/api/v1/cluster/topology
 
 ### 3. 配置定时巡检
 
-编辑 `config.yaml`:
-```yaml
-probe:
-  schedule_cron: "0 */6 * * *"  # 每6小时
-  # schedule_cron: "0 0 * * *"    # 每天午夜
-  # schedule_cron: "0 */1 * * *"  # 每小时
+编辑 `.env`:
+```bash
+# 巡检调度配置
+CORTEX_PROBE_SCHEDULE=0 */6 * * *   # 每6小时
+# CORTEX_PROBE_SCHEDULE=0 0 * * *   # 每天午夜
+# CORTEX_PROBE_SCHEDULE=0 */1 * * * # 每小时
 ```
 
-重启 Probe 服务使配置生效。
+重启 Probe 服务使配置生效：
+```bash
+# Docker 部署
+docker-compose restart cortex-probe
+
+# 传统部署
+sudo systemctl restart cortex-probe
+```
 
 ### 4. 配置告警通知
 
@@ -386,16 +394,23 @@ probe:
 
 1. 与 @BotFather 创建 Bot 并获取 Token
 2. 获取你的 Chat ID (使用 @userinfobot)
-3. 配置 `config.yaml`:
+3. 编辑 `.env`:
 
-```yaml
-telegram:
-  enabled: true
-  bot_token: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-  chat_id: "123456789"
+```bash
+# Telegram 通知配置
+TELEGRAM_ENABLED=true
+TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+TELEGRAM_CHAT_ID=123456789
 ```
 
-4. 重启 Monitor 服务
+4. 重启 Monitor 服务：
+```bash
+# Docker 部署
+docker-compose restart cortex-monitor
+
+# 传统部署
+sudo systemctl restart cortex-monitor
+```
 
 **测试通知**:
 ```bash
@@ -507,13 +522,12 @@ chmod 666 cortex.db cortex_intents.db
 ```
 
 **迁移到 PostgreSQL**:
-```yaml
-# config.yaml
-database:
-  url: "postgresql://user:password@localhost:5432/cortex"
 
-intent_engine:
-  database_url: "postgresql://user:password@localhost:5432/cortex_intents"
+编辑 `.env`:
+```bash
+# 数据库配置
+CORTEX_MONITOR_DATABASE_URL=postgresql://user:password@localhost:5432/cortex
+CORTEX_INTENT_DATABASE_URL=postgresql://user:password@localhost:5432/cortex_intents
 ```
 
 ---
@@ -526,7 +540,7 @@ intent_engine:
 # 1. 备份数据
 cp cortex.db cortex.db.backup
 cp cortex_intents.db cortex_intents.db.backup
-cp config.yaml config.yaml.backup
+cp .env .env.backup
 
 # 2. 停止服务
 docker-compose down
@@ -543,8 +557,9 @@ docker-compose pull
 pip install --upgrade -r requirements.txt
 cd frontend && npm install && cd ..
 
-# 5. 更新配置（检查 config.example.yaml 的新配置项）
-# 手动合并新配置项到 config.yaml
+# 5. 更新配置（检查 .env.example 的新配置项）
+# 手动合并新配置项到 .env
+# 或使用：python scripts/setup_env.py
 
 # 6. 重启服务
 docker-compose up -d
@@ -558,14 +573,13 @@ sudo systemctl start cortex-monitor cortex-probe
 
 ### 1. 使用 PostgreSQL
 
-生产环境建议使用 PostgreSQL 替代 SQLite：
+生产环境建议使用 PostgreSQL 替代 SQLite。
 
-```yaml
-database:
-  url: "postgresql://cortex:password@localhost:5432/cortex_prod"
-
-intent_engine:
-  database_url: "postgresql://cortex:password@localhost:5432/cortex_intents_prod"
+编辑 `.env`:
+```bash
+# 数据库配置 - PostgreSQL
+CORTEX_MONITOR_DATABASE_URL=postgresql://cortex:password@localhost:5432/cortex_prod
+CORTEX_INTENT_DATABASE_URL=postgresql://cortex:password@localhost:5432/cortex_intents_prod
 ```
 
 ### 2. 配置反向代理

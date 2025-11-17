@@ -83,9 +83,7 @@ pip install -e ".[dev]"
 
 ### 配置
 
-Cortex 支持两种配置方式：**环境变量**（推荐）和 YAML 配置文件。
-
-#### 方式 1: 环境变量配置（推荐）⭐
+Cortex 使用 **环境变量** 进行配置（通过 `.env` 文件）。
 
 ```bash
 # 快速设置（自动生成安全密钥）
@@ -110,7 +108,7 @@ ANTHROPIC_API_KEY=sk-ant-your-api-key-here
 CORTEX_MONITOR_HOST=0.0.0.0
 CORTEX_MONITOR_PORT=8000
 
-# 认证密钥（已自动生成安全随机值）
+# 认证密钥（自动生成安全随机值）
 CORTEX_AUTH_SECRET_KEY=<自动生成>
 CORTEX_MONITOR_REGISTRATION_TOKEN=<自动生成>
 ```
@@ -119,31 +117,9 @@ CORTEX_MONITOR_REGISTRATION_TOKEN=<自动生成>
 - ✅ 敏感信息不会被提交到 Git（`.env` 已在 `.gitignore`）
 - ✅ 自动生成安全的随机密钥
 - ✅ 符合 12-Factor App 最佳实践
-- ✅ 便于容器化部署
+- ✅ 完美支持 Docker 和容器化部署
 
-#### 方式 2: YAML 配置文件
-
-```bash
-cp config.example.yaml config.yaml
-```
-
-编辑 `config.yaml`：
-
-```yaml
-agent:
-  id: "node-001"
-  name: "My First Node"
-  mode: "standalone"
-
-claude:
-  api_key: "your-claude-api-key"
-
-monitor:
-  host: "0.0.0.0"
-  port: 8000
-```
-
-**注意**：YAML 文件中的敏感信息会覆盖环境变量（不推荐）。
+> **提示**: 完整的配置选项请查看 `.env.example` 文件。
 
 #### 初始化认证系统
 
