@@ -37,7 +37,7 @@
 ### 测试配置
 - **Monitor**: 127.0.0.1:18000
 - **Probe**: 127.0.0.1:18001
-- **配置文件**: config.yaml
+- **配置 `.env`
 
 ---
 
@@ -311,8 +311,8 @@ POST /api/v1/agents/integration-test-node/heartbeat
 
 更新了配置文件：
 
-- ✅ `config.example.yaml` - 包含所有新配置项
-- ✅ `config.yaml` - 测试配置更新完成
+- ✅ `.env.example` - 包含所有新配置项
+- ✅ `.env` - 测试配置更新完成
 
 ### 7.3 部署文档
 

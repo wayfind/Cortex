@@ -179,7 +179,7 @@ pip install -r requirements.txt
 
 ```bash
 # 复制配置示例
-cp config.example.yaml config.yaml
+cp .env.example config.yaml
 
 # 编辑配置文件
 vim config.yaml

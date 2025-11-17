@@ -162,7 +162,7 @@ WantedBy=multi-user.target
 **启动命令**：
 ```bash
 # 开发模式
-cortex-probe --config config.yaml --reload
+cortex-probe --config .env --reload
 
 # 生产模式
 sudo systemctl start cortex-probe
@@ -242,7 +242,7 @@ pytest tests/probe/test_probe_service.py -v
 
 ```bash
 # 启动服务
-cortex-probe --config config.yaml
+cortex-probe --config .env
 
 # 运行验证脚本
 ./scripts/verify_probe.sh

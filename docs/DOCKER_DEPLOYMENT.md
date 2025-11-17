@@ -157,18 +157,6 @@ TELEGRAM_BOT_TOKEN=your-bot-token
 TELEGRAM_CHAT_ID=your-chat-id
 ```
 
-### 使用配置文件（可选）
-
-如果你更喜欢使用 YAML 配置文件而不是环境变量：
-
-1. 编辑 `config.yaml`
-2. 在 `docker-compose.yml` 中取消注释卷挂载：
-   ```yaml
-   volumes:
-     - ./config.yaml:/app/config.yaml:ro
-   ```
-3. 设置环境变量：`CORTEX_CONFIG=/app/config.yaml`
-
 ## 持久化数据
 
 ### 卷说明

@@ -317,11 +317,11 @@ for agent, count in agent_stats.items():
 
 ### 1. 启用 Intent-Engine
 
-**config.yaml**:
-```yaml
-intent_engine:
-  enabled: true
-  database_url: "sqlite:///./cortex_intents.db"  # 或 PostgreSQL
+在 `.env` 文件中配置:
+```bash
+# Intent Engine 配置
+CORTEX_INTENT_ENABLED=true
+CORTEX_INTENT_DATABASE_URL=sqlite:///./cortex_intents.db  # 或 PostgreSQL
 ```
 
 **环境变量**:

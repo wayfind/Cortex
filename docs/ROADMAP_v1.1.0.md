@@ -459,14 +459,13 @@ intent_status_transitions = Counter('intent_status_transitions', 'Status transit
 - Create `/api/v1/metrics` endpoint exposing Prometheus format
 - Add middleware for automatic HTTP metrics
 
-**Configuration**:
-```yaml
-# config.yaml
-prometheus:
-  enabled: true
-  port: 9090
-  path: /metrics
-  include_intent_metrics: true
+**Configuration** (`.env`):
+```bash
+# Prometheus Metrics
+CORTEX_PROMETHEUS_ENABLED=true
+CORTEX_PROMETHEUS_PORT=9090
+CORTEX_PROMETHEUS_PATH=/metrics
+CORTEX_PROMETHEUS_INCLUDE_INTENT_METRICS=true
 ```
 
 **Tasks**:

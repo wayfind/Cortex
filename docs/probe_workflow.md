@@ -1064,7 +1064,7 @@ elif processes.has_process("unknown_crypto_miner"):
 **初始成本**：
 ```
 运行 install.sh：5 分钟
-编辑 config.yaml：10 分钟
+编辑 `.env`：10 分钟
 测试运行：5 分钟
 总计：20 分钟
 ```

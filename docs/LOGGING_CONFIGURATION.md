@@ -26,7 +26,7 @@ Cortex 使用 [Loguru](https://github.com/Delgan/loguru) 作为统一的日志�
 
 ### 1. 通过配置文件（推荐）
 
-在 `config.yaml` 中配置：
+在 `.env` 中配置：
 
 ```yaml
 logging:
@@ -239,7 +239,7 @@ cortex-monitor
 cortex-monitor --log-level DEBUG
 
 # 指定配置文件
-cortex-monitor --config config.yaml
+cortex-monitor --config .env
 ```
 
 ### Probe
@@ -315,4 +315,4 @@ LoggingConfig.configure(
 
 - [Loguru 官方文档](https://loguru.readthedocs.io/)
 - [日志配置代码](../cortex/common/logging_config.py)
-- [配置示例文件](../config.example.yaml)
+- [配置示例文件](../.env.example)

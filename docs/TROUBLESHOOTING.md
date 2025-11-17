@@ -74,13 +74,17 @@ docker exec cortex-monitor chown cortex:cortex /app/data/cortex.db
 
 ##### 原因C: 配置文件错误
 ```bash
-# 验证 YAML 语法
-python -c "import yaml; yaml.safe_load(open('config.yaml'))"
+# 验证 .env 文件是否存在
+ls -la .env
+
+# 测试配置加载
+python3 -c "from cortex.config.settings import get_settings; print(get_settings())"
 ```
 
 **解决方法**：
-- 检查 YAML 缩进
-- 确保必需字段存在
+- 确保 `.env` 文件存在（复制 `.env.example`）
+- 检查环境变量格式（KEY=VALUE，无空格）
+- 确保必需字段已配置（ANTHROPIC_API_KEY 等）
 - 参考 [配置文档](./CONFIGURATION.md)
 
 ##### 原因D: Python 依赖缺失
@@ -133,7 +137,7 @@ curl https://api.anthropic.com/v1/messages \
 
 # 更新 API Key
 export ANTHROPIC_API_KEY=sk-ant-your-valid-key
-# 或在 config.yaml 或 .env 中更新
+# 或在 .env 中更新
 ```
 
 ##### 原因B: Workspace 目录不存在
@@ -708,7 +712,7 @@ docker-compose ps
 docker-compose logs --tail=100 > logs.txt
 
 # 4. 配置信息（移除敏感信息）
-cat config.yaml | grep -v -E "api_key|token|password" > config-sanitized.yaml
+cat .env | grep -v -E "API_KEY|TOKEN|PASSWORD|SECRET" > env-sanitized.txt
 
 # 5. 系统信息
 uname -a

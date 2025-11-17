@@ -51,7 +51,7 @@ pip install -e .
 
 ### 2. 配置文件准备
 
-创建 `config.yaml`：
+创建 `.env`：
 
 ```yaml
 agent:
@@ -102,10 +102,10 @@ pytest tests/probe/ --cov=cortex.probe --cov-report=html
 
 ```bash
 # 启动 Probe 服务
-cortex-probe --config config.yaml --log-level DEBUG
+cortex-probe --config .env --log-level DEBUG
 
 # 或使用开发模式（自动重载）
-cortex-probe --config config.yaml --reload
+cortex-probe --config .env --reload
 ```
 
 **预期输出**：

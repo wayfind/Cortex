@@ -876,7 +876,7 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
-      - ./config.yaml:/app/config.yaml
+      - ./.env:/app/config.yaml
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}

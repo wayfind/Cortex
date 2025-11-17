@@ -150,7 +150,7 @@ http://localhost:8000
 
 ```bash
 # 启动 Probe Web 服务
-cortex-probe --config config.yaml
+cortex-probe
 
 # 或使用 systemd
 sudo systemctl start cortex-probe
