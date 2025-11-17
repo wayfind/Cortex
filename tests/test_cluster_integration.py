@@ -9,7 +9,7 @@
 5. 决策指令回传
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -161,7 +161,7 @@ class TestHeartbeatDetection:
 
         # 模拟心跳
         agent.status = "online"
-        agent.last_heartbeat = datetime.utcnow()
+        agent.last_heartbeat = datetime.now(timezone.utc)
         agent.health_status = "healthy"
         await test_db_session.commit()
 
@@ -190,7 +190,7 @@ class TestHeartbeatDetection:
 
         # 发送心跳并更新健康状态
         agent.status = "online"
-        agent.last_heartbeat = datetime.utcnow()
+        agent.last_heartbeat = datetime.now(timezone.utc)
         agent.health_status = "warning"  # 设置为 warning
         await test_db_session.commit()
 
@@ -232,7 +232,7 @@ class TestUpstreamForwarder:
                 "status": "approved",
                 "reason": "操作风险低，可以执行",
                 "llm_analysis": "详细分析...",
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         }
         mock_response.raise_for_status = MagicMock()
@@ -354,7 +354,7 @@ class TestDecisionFeedback:
         await test_db_session.commit()
 
         # 模拟执行并回传结果
-        decision.executed_at = datetime.utcnow()
+        decision.executed_at = datetime.now(timezone.utc)
         decision.execution_result = "Successfully killed process PID 1234"
         await test_db_session.commit()
 
@@ -486,7 +486,7 @@ class TestEndToEndClusterWorkflow:
 
         # 发送心跳
         agent.status = "online"
-        agent.last_heartbeat = datetime.utcnow()
+        agent.last_heartbeat = datetime.now(timezone.utc)
         await test_db_session.commit()
 
         # 验证

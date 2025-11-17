@@ -11,7 +11,7 @@
 """
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -271,7 +271,7 @@ class TestJSONSerialization:
         """验证存储 Report 时 JSON 序列化正常工作"""
         report_data = ProbeReport(
             agent_id="test-001",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             status=AgentStatus.HEALTHY,
             metrics=SystemMetrics(
                 cpu_percent=45.0,
@@ -368,7 +368,7 @@ class TestEndToEndIntegration:
             api_key="test-key",
             status="online",
             health_status="healthy",
-            last_heartbeat=datetime.utcnow(),
+            last_heartbeat=datetime.now(timezone.utc),
         )
         test_db_session.add(agent)
         await test_db_session.commit()
@@ -376,7 +376,7 @@ class TestEndToEndIntegration:
         # 2. 创建 ProbeReport
         report_data = ProbeReport(
             agent_id="test-agent-001",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             status=AgentStatus.WARNING,
             metrics=SystemMetrics(
                 cpu_percent=75.0,

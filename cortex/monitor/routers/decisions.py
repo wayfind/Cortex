@@ -2,7 +2,7 @@
 L2 决策路由
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncGenerator, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -105,7 +105,7 @@ async def request_decision(
                 "created_at": decision.created_at.isoformat(),
             },
             "message": "Decision completed",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -159,7 +159,7 @@ async def list_decisions(
                 "offset": offset,
             },
             "message": "Decisions retrieved successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -198,7 +198,7 @@ async def get_decision(
                 "execution_result": decision.execution_result,
             },
             "message": "Decision retrieved successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -224,7 +224,7 @@ async def submit_decision_feedback(
         if not decision:
             raise HTTPException(status_code=404, detail="Decision not found")
 
-        decision.executed_at = datetime.utcnow()
+        decision.executed_at = datetime.now(timezone.utc)
         decision.execution_result = execution_result
 
         await session.commit()
@@ -235,7 +235,7 @@ async def submit_decision_feedback(
             "success": True,
             "data": {"decision_id": decision_id, "updated_at": decision.executed_at.isoformat()},
             "message": "Feedback received successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:

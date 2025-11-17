@@ -5,7 +5,7 @@
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from loguru import logger
 from sqlalchemy import select
@@ -39,7 +39,7 @@ class HeartbeatChecker:
         try:
             async for session in self.db_manager.get_session():
                 # 计算超时时间点
-                timeout_threshold = datetime.utcnow() - timedelta(minutes=self.timeout_minutes)
+                timeout_threshold = datetime.now(timezone.utc) - timedelta(minutes=self.timeout_minutes)
 
                 # 查询所有 online 状态的 Agent
                 result = await session.execute(

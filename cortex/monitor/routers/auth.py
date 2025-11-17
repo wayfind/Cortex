@@ -2,7 +2,7 @@
 认证与授权 API 路由
 """
 
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -148,7 +148,7 @@ async def login(
         )
 
     # 更新最后登录时间
-    user.last_login = datetime.now(UTC)
+    user.last_login = datetime.now(timezone.utc)
     await session.commit()
 
     # 创建 access token
@@ -394,7 +394,7 @@ async def create_api_key(
     # 计算过期时间
     expires_at = None
     if api_key_create.expires_in_days:
-        expires_at = datetime.now(UTC) + timedelta(days=api_key_create.expires_in_days)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=api_key_create.expires_in_days)
 
     # 获取 owner_id
     owner_id = None

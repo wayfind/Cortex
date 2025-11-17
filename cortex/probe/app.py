@@ -10,7 +10,7 @@ Cortex Probe Agent - FastAPI Web Service
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -88,7 +88,7 @@ async def health_check():
     return {
         "status": "healthy" if is_healthy else "unhealthy",
         "scheduler_running": is_healthy,
-        "timestamp": datetime.now(UTC).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -121,7 +121,7 @@ async def get_status():
         "last_inspection": status_info["last_inspection"],
         "next_inspection": status_info["next_inspection"],
         "current_execution": status_info.get("current_execution"),
-        "timestamp": datetime.now(UTC).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -153,7 +153,7 @@ async def execute_inspection(request: ExecuteRequest = ExecuteRequest()):
             "status": "started",
             "execution_id": execution_id,
             "message": "Inspection started successfully",
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except RuntimeError as e:
         return JSONResponse(
@@ -161,7 +161,7 @@ async def execute_inspection(request: ExecuteRequest = ExecuteRequest()):
             content={
                 "status": "already_running",
                 "message": str(e),
-                "timestamp": datetime.now(UTC).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
         )
 
@@ -209,7 +209,7 @@ async def pause_schedule():
     return {
         "status": "paused",
         "message": "Scheduled inspections paused",
-        "timestamp": datetime.now(UTC).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -224,7 +224,7 @@ async def resume_schedule():
     return {
         "status": "resumed",
         "message": "Scheduled inspections resumed",
-        "timestamp": datetime.now(UTC).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -248,7 +248,7 @@ async def get_reports(limit: int = 20):
     return {
         "reports": reports,
         "total": len(reports),
-        "timestamp": datetime.now(UTC).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -297,7 +297,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "type": "connected",
             "message": "Connected to Cortex Probe Agent",
             "agent_id": get_settings().agent.id,
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
         # 保持连接，接收客户端消息（如果需要）
@@ -325,7 +325,7 @@ async def global_exception_handler(request, exc):
         content={
             "error": "Internal server error",
             "message": str(exc),
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     )
 

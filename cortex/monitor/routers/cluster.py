@@ -2,7 +2,7 @@
 集群管理路由
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -75,7 +75,7 @@ async def register_agent(
             existing_agent.parent_id = agent_reg.parent_id
             existing_agent.upstream_monitor_url = agent_reg.upstream_monitor_url
             existing_agent.metadata_json = agent_reg.metadata
-            existing_agent.updated_at = datetime.utcnow()
+            existing_agent.updated_at = datetime.now(timezone.utc)
 
             await session.commit()
 
@@ -95,7 +95,7 @@ async def register_agent(
                     "action": "updated",
                 },
                 "message": "Agent updated successfully",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         # 4. 创建新 Agent
@@ -128,7 +128,7 @@ async def register_agent(
                 "action": "created",
             },
             "message": "Agent registered successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -177,7 +177,7 @@ async def list_agents(
                 "count": len(agents),
             },
             "message": "Agents retrieved successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -208,7 +208,7 @@ async def get_agent(
         total_reports = reports_count_result.scalar() or 0
 
         # 查询最近 24 小时的报告数
-        last_24h = datetime.utcnow() - timedelta(hours=24)
+        last_24h = datetime.now(timezone.utc) - timedelta(hours=24)
         recent_reports_result = await session.execute(
             select(func.count(Report.id)).where(
                 Report.agent_id == agent_id, Report.timestamp >= last_24h
@@ -234,7 +234,7 @@ async def get_agent(
                 },
             },
             "message": "Agent retrieved successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -272,7 +272,7 @@ async def delete_agent(
             "success": True,
             "data": {"agent_id": agent_id},
             "message": "Agent deleted successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -309,7 +309,7 @@ async def agent_heartbeat(
             raise HTTPException(status_code=404, detail="Agent not found")
 
         # 更新心跳时间和状态
-        agent.last_heartbeat = datetime.utcnow()
+        agent.last_heartbeat = datetime.now(timezone.utc)
         agent.status = "online"
 
         # 如果提供了健康状态，也更新
@@ -334,7 +334,7 @@ async def agent_heartbeat(
                 "last_heartbeat": agent.last_heartbeat.isoformat(),
             },
             "message": "Heartbeat recorded",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -380,7 +380,7 @@ async def cluster_overview(
         critical_count = critical_result.scalar() or 0
 
         # 统计最近 1 小时的报告数
-        last_hour = datetime.utcnow() - timedelta(hours=1)
+        last_hour = datetime.now(timezone.utc) - timedelta(hours=1)
         recent_reports_result = await session.execute(
             select(func.count(Report.id)).where(Report.timestamp >= last_hour)
         )
@@ -405,7 +405,7 @@ async def cluster_overview(
                 },
             },
             "message": "Cluster overview retrieved successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -500,7 +500,7 @@ async def cluster_topology(
             "success": True,
             "data": topology,
             "message": "Cluster topology retrieved successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:

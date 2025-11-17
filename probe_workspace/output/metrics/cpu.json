@@ -1,10 +1,10 @@
 {
   "status": "ok",
-  "cpu_percent": 0.71,
+  "cpu_percent": 1.43,
   "load_average": {
-    "1min": 0.25,
-    "5min": 0.49,
-    "15min": 0.57
+    "1min": 0.8,
+    "5min": 0.44,
+    "15min": 0.37
   },
   "cpu_info": {
     "model": "Intel(R) Core(TM) i7-14700KF",

@@ -187,11 +187,11 @@ async def get_intent_stats(
     await intent_recorder.initialize()
 
     try:
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         async with intent_recorder.async_session_factory() as session:
             # 时间过滤
-            time_threshold = datetime.utcnow() - timedelta(hours=hours)
+            time_threshold = datetime.now(timezone.utc) - timedelta(hours=hours)
 
             query = select(IntentRecord).where(IntentRecord.timestamp >= time_threshold)
 

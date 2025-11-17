@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Dict, Optional, Any
@@ -80,7 +80,7 @@ class ClaudeExecutor:
         if not execution_id:
             execution_id = str(uuid.uuid4())
 
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
 
         result = ExecutionResult(
             execution_id=execution_id,
@@ -100,7 +100,7 @@ class ClaudeExecutor:
             stdout, stderr, exit_code = await self._run_claude_command(prompt)
 
             # 计算执行时间
-            completed_at = datetime.utcnow()
+            completed_at = datetime.now(timezone.utc)
             duration = (completed_at - started_at).total_seconds()
 
             # 更新结果
@@ -134,14 +134,14 @@ class ClaudeExecutor:
         except asyncio.TimeoutError:
             result.status = ExecutionStatus.TIMEOUT
             result.error_message = f"Execution timed out after {self.timeout}s"
-            result.completed_at = datetime.utcnow()
+            result.completed_at = datetime.now(timezone.utc)
 
             logger.error(f"Execution {execution_id} timed out")
 
         except Exception as e:
             result.status = ExecutionStatus.FAILED
             result.error_message = str(e)
-            result.completed_at = datetime.utcnow()
+            result.completed_at = datetime.now(timezone.utc)
 
             logger.error(f"Execution {execution_id} failed: {e}", exc_info=True)
 
@@ -272,7 +272,7 @@ Begin the inspection now."""
             "status": self.current_execution.status,
             "started_at": self.current_execution.started_at.isoformat(),
             "duration_seconds": (
-                (datetime.utcnow() - self.current_execution.started_at).total_seconds()
+                (datetime.now(timezone.utc) - self.current_execution.started_at).total_seconds()
                 if self.current_execution.status == ExecutionStatus.RUNNING
                 else self.current_execution.duration_seconds
             )

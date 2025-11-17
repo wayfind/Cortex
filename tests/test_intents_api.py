@@ -31,12 +31,12 @@ async def test_query_intents_list(client, mock_intent_recorder):
     """测试查询意图列表 API"""
     # Mock 查询结果
     from cortex.common.intent_recorder import IntentRecord
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     mock_records = [
         IntentRecord(
             id=1,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             agent_id="agent-001",
             intent_type="decision",
             level="L1",
@@ -47,7 +47,7 @@ async def test_query_intents_list(client, mock_intent_recorder):
         ),
         IntentRecord(
             id=2,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             agent_id="agent-002",
             intent_type="blocker",
             level="L3",
@@ -138,7 +138,7 @@ async def test_get_intent_by_id(client):
 
     mock_record = IntentRecord(
         id=1,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         agent_id="agent-001",
         intent_type="decision",
         level="L1",
@@ -200,7 +200,7 @@ async def test_intent_stats_summary(client):
     mock_records = [
         IntentRecord(
             id=1,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             agent_id="agent-001",
             intent_type="decision",
             level="L1",
@@ -211,7 +211,7 @@ async def test_intent_stats_summary(client):
         ),
         IntentRecord(
             id=2,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             agent_id="agent-001",
             intent_type="blocker",
             level="L3",
@@ -222,7 +222,7 @@ async def test_intent_stats_summary(client):
         ),
         IntentRecord(
             id=3,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             agent_id="agent-002",
             intent_type="milestone",
             level=None,

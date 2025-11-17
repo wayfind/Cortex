@@ -3,7 +3,7 @@
 """
 
 import secrets
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends, HTTPException, Security, status
@@ -105,11 +105,11 @@ async def validate_api_key(
         return None
 
     # 检查是否过期
-    if api_key.expires_at and api_key.expires_at < datetime.now(UTC):
+    if api_key.expires_at and api_key.expires_at < datetime.now(timezone.utc):
         return None
 
     # 更新使用统计
-    api_key.last_used_at = datetime.now(UTC)
+    api_key.last_used_at = datetime.now(timezone.utc)
     api_key.usage_count += 1
     await session.commit()
 
@@ -124,9 +124,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode = data.copy()
 
     if expires_delta:
-        expire = datetime.now(UTC) + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)

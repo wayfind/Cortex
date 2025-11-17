@@ -4,7 +4,7 @@
 
 import pytest
 from httpx import AsyncClient, ASGITransport
-from datetime import datetime
+from datetime import datetime, timezone
 
 from cortex.monitor.database import Agent
 from cortex.common.models import ProbeReport, SystemMetrics, IssueReport, ActionReport
@@ -29,7 +29,7 @@ class TestReportsAPI:
         # 创建符合 ProbeReport 模型的报告数据
         report_data = {
             "agent_id": "test-agent-001",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "status": "healthy",  # AgentStatus enum: healthy/warning/critical
             "metrics": {  # SystemMetrics 对象
                 "cpu_percent": 45.5,
@@ -74,7 +74,7 @@ class TestReportsAPI:
         """测试提交报告时 Agent 不存在"""
         report_data = {
             "agent_id": "nonexistent-agent",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "status": "healthy",
             "metrics": {
                 "cpu_percent": 45.5,
@@ -110,7 +110,7 @@ class TestReportsAPI:
         # 提交报告
         report_data = {
             "agent_id": "test-agent-002",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "status": "healthy",
             "metrics": {
                 "cpu_percent": 30.0,
@@ -149,7 +149,7 @@ class TestReportsAPI:
         # 为每个 Agent 提交报告
         report1 = {
             "agent_id": "agent-001",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "status": "healthy",
             "metrics": {
                 "cpu_percent": 20.0,
@@ -161,7 +161,7 @@ class TestReportsAPI:
         }
         report2 = {
             "agent_id": "agent-002",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "status": "warning",
             "metrics": {
                 "cpu_percent": 80.0,
@@ -200,7 +200,7 @@ class TestReportsAPI:
         # 提交报告
         report_data = {
             "agent_id": "test-agent-003",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "status": "critical",
             "metrics": {
                 "cpu_percent": 95.0,
@@ -258,7 +258,7 @@ class TestReportsAPI:
         # 创建包含 L2 问题的报告
         report_data = {
             "agent_id": "test-agent-004",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "status": "warning",
             "metrics": {
                 "cpu_percent": 70.0,

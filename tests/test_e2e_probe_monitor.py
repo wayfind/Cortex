@@ -9,7 +9,7 @@ Probe ↔ Monitor 端到端集成测试
 5. Intent-Engine 完整记录
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -64,7 +64,7 @@ class TestL1SelfHealing:
         # 模拟 Probe 生成的 L1 自主修复报告
         report_data = ProbeReport(
             agent_id="probe-001",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             status=AgentStatus.HEALTHY,  # L1 问题已解决，状态健康
             metrics=SystemMetrics(
                 cpu_percent=25.0,
@@ -159,7 +159,7 @@ class TestL2DecisionApproval:
         # 模拟 Probe 生成的 L2 决策请求报告
         report_data = ProbeReport(
             agent_id="probe-002",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             status=AgentStatus.WARNING,
             metrics=SystemMetrics(
                 cpu_percent=30.0,
@@ -281,7 +281,7 @@ class TestL2DecisionRejection:
         # 模拟高风险 L2 决策请求
         report_data = ProbeReport(
             agent_id="probe-003",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             status=AgentStatus.WARNING,
             metrics=SystemMetrics(
                 cpu_percent=95.0,  # CPU 极高
@@ -397,7 +397,7 @@ class TestL3AlertTriggering:
         # 模拟 L3 严重问题报告
         report_data = ProbeReport(
             agent_id="probe-004",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             status=AgentStatus.CRITICAL,
             metrics=SystemMetrics(
                 cpu_percent=40.0,
@@ -499,7 +499,7 @@ class TestMixedIssuesReport:
         # 模拟混合问题报告
         report_data = ProbeReport(
             agent_id="probe-005",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             status=AgentStatus.WARNING,
             metrics=SystemMetrics(
                 cpu_percent=40.0,

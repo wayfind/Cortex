@@ -2,7 +2,7 @@
 数据上报路由
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -56,14 +56,14 @@ async def receive_report(
                 api_key=f"auto_generated_{report.agent_id}",  # TODO: 生成真实的 API Key
                 status="online",
                 health_status=report.status.value,
-                last_heartbeat=datetime.utcnow(),
+                last_heartbeat=datetime.now(timezone.utc),
             )
             session.add(agent)
         else:
             # 2. 更新心跳和状态
             agent.status = "online"
             agent.health_status = report.status.value
-            agent.last_heartbeat = datetime.utcnow()
+            agent.last_heartbeat = datetime.now(timezone.utc)
 
         # 3. 存储报告
         db_report = Report(
@@ -215,7 +215,7 @@ async def receive_report(
                 "l3_alerts_triggered": len(l3_alerts),
             },
             "message": "Report received successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -240,15 +240,15 @@ async def receive_heartbeat(
             raise HTTPException(status_code=404, detail="Agent not found")
 
         agent.status = "online"
-        agent.last_heartbeat = datetime.utcnow()
+        agent.last_heartbeat = datetime.now(timezone.utc)
 
         await session.commit()
 
         return {
             "success": True,
-            "data": {"received_at": datetime.utcnow().isoformat()},
+            "data": {"received_at": datetime.now(timezone.utc).isoformat()},
             "message": "Heartbeat received",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:

@@ -2,7 +2,7 @@
 L3 告警聚合器
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from loguru import logger
@@ -93,7 +93,7 @@ class AlertAggregator:
             True 如果是重复告警
         """
         # 查询最近 DEDUP_WINDOW_MINUTES 分钟内相同类型的未解决告警
-        time_threshold = datetime.utcnow() - timedelta(minutes=self.DEDUP_WINDOW_MINUTES)
+        time_threshold = datetime.now(timezone.utc) - timedelta(minutes=self.DEDUP_WINDOW_MINUTES)
 
         result = await session.execute(
             select(Alert)
@@ -200,7 +200,7 @@ class AlertAggregator:
         Returns:
             统计信息字典
         """
-        time_threshold = datetime.utcnow() - timedelta(hours=hours)
+        time_threshold = datetime.now(timezone.utc) - timedelta(hours=hours)
 
         # 查询最近 N 小时的所有告警
         result = await session.execute(

@@ -2,7 +2,7 @@
 AlertAggregator 测试
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import select
@@ -75,7 +75,7 @@ async def test_alert_dedup_window_expired(alert_aggregator, sample_l3_issue, tes
         description="Unable to connect to primary database",
         severity="critical",
         status="new",
-        created_at=datetime.utcnow() - timedelta(minutes=35),  # 35分钟前
+        created_at=datetime.now(timezone.utc) - timedelta(minutes=35),  # 35分钟前
     )
     test_db_session.add(old_alert)
     await test_db_session.commit()
@@ -174,7 +174,7 @@ async def test_format_alert_notification(alert_aggregator, sample_l3_issue):
         severity="critical",
         details={"database": "postgres-primary"},
         status="new",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
 
     message = alert_aggregator.format_alert_for_notification(alert)

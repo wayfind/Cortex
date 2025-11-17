@@ -11,7 +11,7 @@
 - 密码哈希和验证
 """
 
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
@@ -122,8 +122,8 @@ class TestJWTToken:
         assert "exp" in decoded
 
         # 验证过期时间大约为 15 分钟后
-        exp_time = datetime.fromtimestamp(decoded["exp"], UTC)
-        now = datetime.now(UTC)
+        exp_time = datetime.fromtimestamp(decoded["exp"], timezone.utc)
+        now = datetime.now(timezone.utc)
         delta = exp_time - now
 
         assert 14 <= delta.total_seconds() / 60 <= 16

@@ -2,7 +2,7 @@
 Monitor API 端点测试
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -41,7 +41,7 @@ async def test_receive_report_new_agent(test_db_session):
 
     report_data = {
         "agent_id": "new-agent-001",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "status": "healthy",
         "metrics": {
             "cpu_percent": 25.5,

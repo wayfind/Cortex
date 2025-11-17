@@ -7,7 +7,7 @@ API 响应缓存工具
 import asyncio
 import hashlib
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Any, Callable, Optional
 
@@ -51,7 +51,7 @@ class TTLCache:
             item = self._cache[key]
 
             # 检查是否过期
-            if datetime.utcnow() >= item["expires_at"]:
+            if datetime.now(timezone.utc) >= item["expires_at"]:
                 # 过期，删除并返回 None
                 del self._cache[key]
                 logger.debug(f"Cache expired: {key}")
@@ -72,7 +72,7 @@ class TTLCache:
         if ttl is None:
             ttl = self._default_ttl
 
-        expires_at = datetime.utcnow() + timedelta(seconds=ttl)
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
 
         async with self._lock:
             self._cache[key] = {

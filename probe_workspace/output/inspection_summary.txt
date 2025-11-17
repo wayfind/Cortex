@@ -1,114 +1,139 @@
-================================================================================
-           CORTEX PROBE AGENT - SYSTEM INSPECTION SUMMARY
-================================================================================
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    CORTEX PROBE INSPECTION SUMMARY                           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-Inspection Time: 2025-11-17 12:37:27 UTC
+Inspection Time: 2025-11-17 14:56:56 UTC
 Agent ID: agent-unknown
-Overall Status: ✓ HEALTHY
+Overall Status: ✅ HEALTHY
 
-================================================================================
-METRICS OVERVIEW
-================================================================================
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                              SYSTEM METRICS                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-CPU Health:
-  ✓ Usage: 0.71% (Threshold: < 70%)
-  ✓ Load Average (1/5/15 min): 0.25 / 0.49 / 0.57
-  ✓ CPU Cores: 28
-  ✓ Model: Intel(R) Core(TM) i7-14700KF @ 3417.6 MHz
-  Status: EXCELLENT - System under minimal load
+┌─ CPU ──────────────────────────────────────────────────────────────────────┐
+│ Current Usage:   1.43%                                    Status: ✅ HEALTHY│
+│ Load Average:    0.80 / 0.44 / 0.37 (1/5/15 min)                           │
+│ CPU Cores:       28 cores                                                   │
+│ Threshold:       < 70% (Normal) | 70-85% (Warning) | > 85% (Critical)     │
+│ Assessment:      CPU usage is excellent. System is very lightly loaded.    │
+└────────────────────────────────────────────────────────────────────────────┘
 
-Disk Health:
-  ⚠ Max Usage: 100.0% (reported)
-  ✓ Main Partition (/dev/sdd): 7.46% (75.16 GB used / 1006.85 GB total)
-  ✓ Available Space: 880.48 GB
-  Note: 100% usage on snap filesystems is EXPECTED BEHAVIOR
-        Snap mounts are read-only compressed filesystems designed to show 100%
-  Status: HEALTHY - Ample disk space available
+┌─ Memory ───────────────────────────────────────────────────────────────────┐
+│ Current Usage:   67.69%                                   Status: ✅ HEALTHY│
+│ Total Memory:    15.53 GB                                                   │
+│ Available:       5.04 GB                                                    │
+│ Swap Usage:      0.0%                                                       │
+│ Threshold:       < 80% (Normal) | 80-90% (Warning) | > 90% (Critical)     │
+│ Assessment:      Memory usage is within normal range.                      │
+└────────────────────────────────────────────────────────────────────────────┘
 
-Memory Health:
-  ✓ Usage: 68.63% (Threshold: < 80%)
-  ✓ Total: 15.53 GB
-  ✓ Used: 10.66 GB
-  ✓ Available: 4.87 GB
-  ✓ Swap: 0.0% (0.0 GB / 4.0 GB)
-  Status: HEALTHY - Good memory headroom
+┌─ Disk Space ───────────────────────────────────────────────────────────────┐
+│ Max Usage:       100.0%                                   Status: ⚠️  NOTE  │
+│ Primary (/):     7.47% (75.18 GB used / 1006.85 GB total)                 │
+│ /mnt/c:          66.81% (200.18 GB used / 299.61 GB total)                │
+│ /mnt/d:          43.25% (675.78 GB used / 1562.5 GB total)                │
+│ Threshold:       < 80% (Normal) | 80-90% (Warning) | > 90% (Critical)     │
+│ Assessment:      The 100% usage is from snapfuse mounts (read-only snap    │
+│                  packages), which is normal. All writable partitions are   │
+│                  healthy with plenty of free space.                        │
+└────────────────────────────────────────────────────────────────────────────┘
 
-Services Health:
-  ✓ Active Services: 3/4 (cron, rsyslog, systemd-journald)
-  ℹ Inactive Services: 1 (sshd - may be intentional)
-  ✓ Failed Services: 0
-  Status: HEALTHY - All critical services operational
+┌─ Services ─────────────────────────────────────────────────────────────────┐
+│ Status:          3/4 services active                      Status: ✅ HEALTHY│
+│ Active Services: cron, rsyslog, systemd-journald                           │
+│ Inactive:        sshd (expected in WSL environment)                        │
+│ Failed Services: None                                                       │
+│ Assessment:      All critical services are running properly.               │
+└────────────────────────────────────────────────────────────────────────────┘
 
-System Uptime:
-  ⏱ 124,185 seconds (≈ 34.5 hours / 1.4 days)
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           ISSUES & ACTIONS                                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-================================================================================
-ISSUES DETECTED
-================================================================================
+Issues Detected:       0
+  ├─ L1 (Auto-Fix):    0
+  ├─ L2 (Decision):    0
+  └─ L3 (Critical):    0
 
-No issues detected across all inspection categories.
+Actions Taken:         0
+  ├─ L1 Fixes:         0
+  └─ Other:            0
 
-  L1 Issues (Auto-fixable): 0
-  L2 Issues (Needs decision): 0
-  L3 Issues (Critical): 0
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                            INSPECTION DETAILS                                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-================================================================================
-ACTIONS TAKEN
-================================================================================
+1. CPU Inspection
+   ✅ Completed successfully
+   - CPU usage: 1.43% (well below 70% threshold)
+   - Load average: 0.80 (28 cores available)
+   - No high-CPU processes detected
+   - No action required
 
-No automatic fixes were required during this inspection.
+2. Disk Space Inspection
+   ✅ Completed successfully
+   - Primary partition: 7.47% used
+   - snapfuse at 100% is normal (read-only snap packages)
+   - All writable partitions have ample free space
+   - No cleanup required
 
-================================================================================
-INSPECTION DETAILS
-================================================================================
+3. Memory Inspection
+   ✅ Completed successfully
+   - Memory usage: 67.69% (below 80% threshold)
+   - 5.04 GB available
+   - Swap not in use (0%)
+   - No memory pressure detected
 
-Inspections Performed:
-  1. ✓ CPU Usage & Load Average
-  2. ✓ Disk Space & Partitions
-  3. ✓ Memory & Swap Usage
-  4. ✓ Critical Services Status
+4. Services Inspection
+   ✅ Completed successfully
+   - 3 active services: cron, rsyslog, systemd-journald
+   - sshd inactive (expected in WSL)
+   - No failed services
+   - No restart required
 
-All inspections completed successfully without errors.
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                              SYSTEM INFO                                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-================================================================================
-REPORT DELIVERY
-================================================================================
+Uptime:             132,554 seconds (1 day, 12 hours, 49 minutes)
+Platform:           Linux on WSL2 (Windows Subsystem for Linux)
+Kernel:             6.6.87.2-microsoft-standard-WSL2
+CPU Model:          Intel(R) Core(TM) i7-14700KF @ 3417.6 MHz
+Total RAM:          15.53 GB
+Total Disk:         1006.85 GB (primary partition)
 
-Report File: output/report.json
-Upload Status: ⚠ Monitor not configured
-  
-  Configuration file not found at: /etc/cortex/config.yaml
-  
-  To enable report upload:
-  - Create configuration file at /etc/cortex/config.yaml
-  - Set agent.upstream_monitor_url to your Monitor URL
-  - Optionally set agent.monitor_api_key for authentication
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           RECOMMENDATIONS                                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-================================================================================
-RECOMMENDATIONS
-================================================================================
+✅ No action required at this time.
 
-1. System Health: ✓ EXCELLENT
-   - All metrics well within healthy thresholds
-   - No immediate action required
+The system is operating within normal parameters across all monitored metrics:
+  • CPU utilization is very low (1.43%)
+  • Memory usage is comfortable (67.69%)
+  • Disk space is plentiful on all writable partitions
+  • All critical services are operational
 
-2. Monitoring Setup:
-   - Configure /etc/cortex/config.yaml to enable report uploads
-   - Consider enabling upstream Monitor for centralized monitoring
+Continue regular monitoring schedule.
 
-3. SSH Service:
-   - sshd service is inactive
-   - If remote access is needed, enable and start the service
-   - If intentionally disabled, no action needed
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          REPORT UPLOAD STATUS                                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-================================================================================
-NEXT INSPECTION
-================================================================================
+Monitor URL:        Not configured (standalone mode)
+Upload Status:      ⚠️  Skipped - No upstream monitor configured
+Report Saved To:    output/report.json
 
-The next scheduled inspection will run according to the cron schedule
-configured in /etc/cortex/config.yaml (probe.schedule setting).
+Note: This agent appears to be running in standalone mode without an upstream
+      monitor configured. The report has been saved locally and is available at:
+      /mnt/d/prj/cortext/probe_workspace/output/report.json
 
-Default schedule: Every hour
-Recommended schedule: */30 * * * * (every 30 minutes)
+      To enable automatic reporting to a Monitor, configure the upstream_monitor_url
+      in /etc/cortex/config.yaml:
 
-================================================================================
+      agent:
+        upstream_monitor_url: http://monitor.example.com:8000
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         END OF INSPECTION REPORT                             ║
+╚══════════════════════════════════════════════════════════════════════════════╝

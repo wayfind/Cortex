@@ -1,17 +1,17 @@
 {
   "agent_id": "agent-unknown",
-  "timestamp": "2025-11-17T12:37:27.695213+00:00",
+  "timestamp": "2025-11-17T14:56:56.620366+00:00",
   "status": "healthy",
   "metrics": {
     "disk_percent": 100.0,
-    "memory_percent": 68.63,
-    "cpu_percent": 0.71,
+    "memory_percent": 67.69,
+    "cpu_percent": 1.43,
     "load_average": [
-      0.25,
-      0.49,
-      0.57
+      0.8,
+      0.44,
+      0.37
     ],
-    "uptime_seconds": 124185
+    "uptime_seconds": 132554
   },
   "issues": [],
   "actions_taken": []

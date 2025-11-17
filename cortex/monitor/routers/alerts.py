@@ -2,7 +2,7 @@
 告警管理路由
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -91,7 +91,7 @@ async def list_alerts(
                 "offset": offset,
             },
             "message": "Alerts retrieved successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:
@@ -134,7 +134,7 @@ async def get_alert(
                 "notes": alert.notes,
             },
             "message": "Alert retrieved successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -164,7 +164,7 @@ async def acknowledge_alert(
             raise HTTPException(status_code=400, detail="Alert already acknowledged or resolved")
 
         alert.status = "acknowledged"
-        alert.acknowledged_at = datetime.utcnow()
+        alert.acknowledged_at = datetime.now(timezone.utc)
         alert.acknowledged_by = ack.acknowledged_by
 
         if ack.notes:
@@ -182,7 +182,7 @@ async def acknowledge_alert(
                 "acknowledged_at": alert.acknowledged_at.isoformat(),
             },
             "message": "Alert acknowledged successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:
@@ -213,7 +213,7 @@ async def resolve_alert(
             raise HTTPException(status_code=400, detail="Alert already resolved")
 
         alert.status = "resolved"
-        alert.resolved_at = datetime.utcnow()
+        alert.resolved_at = datetime.now(timezone.utc)
 
         if resolution.notes:
             if alert.notes:
@@ -229,7 +229,7 @@ async def resolve_alert(
             "success": True,
             "data": {"alert_id": alert_id, "status": alert.status, "resolved_at": alert.resolved_at.isoformat()},
             "message": "Alert resolved successfully",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:

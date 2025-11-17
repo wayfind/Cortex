@@ -5,7 +5,7 @@ WebSocket 连接管理器
 """
 
 import logging
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from typing import List, Dict, Any
 
 from fastapi import WebSocket
@@ -65,7 +65,7 @@ class WebSocketManager:
         """
         # 添加时间戳
         if "timestamp" not in message:
-            message["timestamp"] = datetime.now(UTC).isoformat()
+            message["timestamp"] = datetime.now(timezone.utc).isoformat()
 
         logger.debug(f"Broadcasting message to {len(self.active_connections)} clients: {message.get('type')}")
 

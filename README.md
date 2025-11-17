@@ -2,7 +2,7 @@
 
 **去中心化、分级自治的智能运维网络**
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/version-v1.0.0--rc1-blue)](https://github.com/cortex-ops/cortex/releases/tag/v1.0.0-rc1)
@@ -53,12 +53,12 @@ docker-compose up -d
 #### 环境要求
 
 **Monitor**：
-- Python 3.11+
+- Python 3.10+
 - SQLite 3.40+ (或 PostgreSQL 13+)
 - Claude API Key
 
 **Probe（新版文档驱动）**：
-- Python 3.11+
+- Python 3.10+
 - [Claude Code](https://code.claude.com) CLI
 - 系统工具：bash, cron
 
